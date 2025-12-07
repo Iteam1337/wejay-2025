@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { SearchBar } from "@/components/SearchBar";
 import { TrackCard } from "@/components/TrackCard";
 import { TabButton } from "@/components/TabButton";
@@ -9,12 +10,26 @@ import { mockUsers, mockFavorites, mockPlaylistTracks } from "@/lib/mockData";
 import { arrangeTracks } from "@/lib/dhondt";
 import { Track, SearchTrack } from "@/types/wejay";
 import { toast } from "sonner";
-import { Heart, Search, Loader2 } from "lucide-react";
+import { Heart, Search, Loader2, LogOut } from "lucide-react";
 import { useSpotifySearch } from "@/hooks/useSpotifySearch";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSocket } from "@/hooks/useSocket";
 
 type Tab = "search" | "favorites";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { 
+    isConnected, 
+    currentRoom, 
+    users: socketUsers, 
+    joinRoom, 
+    leaveRoom,
+    addTrack: socketAddTrack 
+  } = useSocket();
+  
   const [activeTab, setActiveTab] = useState<Tab>("search");
   const [searchQuery, setSearchQuery] = useState("");
   const [playlistTracks, setPlaylistTracks] = useState<Track[]>(mockPlaylistTracks);
@@ -22,12 +37,44 @@ const Index = () => {
   const [users, setUsers] = useState(mockUsers);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const currentUserId = "user-1";
+  const currentUserId = user?.id || "user-1";
 
   const { results: spotifyResults, isLoading, error } = useSpotifySearch(
     searchQuery,
     activeTab === "search"
   );
+
+  // Handle authentication and room joining
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      navigate('/');
+      return;
+    }
+
+    const roomId = searchParams.get('room');
+    if (roomId && isConnected) {
+      joinRoom(roomId);
+    }
+
+    return () => {
+      if (currentRoom) {
+        leaveRoom();
+      }
+    };
+  }, [isAuthenticated, user, navigate, searchParams, isConnected, joinRoom, leaveRoom, currentRoom]);
+
+  // Update users when socket users change
+  useEffect(() => {
+    if (socketUsers.length > 0) {
+      setUsers(socketUsers.map(u => ({
+        id: u.id,
+        name: u.display_name,
+        avatar: u.images[0]?.url || '/placeholder.svg',
+        isOnline: true,
+        tracksAdded: 0, // This would be tracked by the backend
+      })));
+    }
+  }, [socketUsers]);
 
   const searchResults: SearchTrack[] = useMemo(() => {
     return spotifyResults.map(track => ({
@@ -93,8 +140,13 @@ const Index = () => {
         : u
     ));
 
+    // Send to socket if connected
+    if (isConnected && currentRoom) {
+      socketAddTrack(newTrack);
+    }
+
     toast.success(`${track.name} added to queue`, {
-      description: "Track arranged using D'Hondt method",
+      description: currentRoom ? "Added to room queue" : "Track arranged using D'Hondt method",
     });
   };
 
@@ -106,6 +158,21 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="container py-3">
           <div className="flex items-center justify-between gap-4">
+            {/* Room Info */}
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-lg font-bold uppercase">Wejay</h1>
+                {currentRoom && (
+                  <p className="text-xs text-muted-foreground">
+                    {currentRoom.name} • {users.length} user{users.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+              {isConnected && (
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              )}
+            </div>
+
             <SpotifyPlayer
               currentTrack={currentTrack}
               onTrackEnd={handleTrackEnd}
@@ -120,11 +187,22 @@ const Index = () => {
               </span>
               <div className="neumorphic w-8 h-8 rounded-full overflow-hidden">
                 <img 
-                  src={mockUsers[0].avatar} 
-                  alt="You"
+                  src={user?.images[0]?.url || mockUsers[0].avatar} 
+                  alt={user?.display_name || "You"}
                   className="w-full h-full object-cover"
                 />
               </div>
+              <button
+                onClick={() => {
+                  leaveRoom();
+                  logout();
+                  navigate('/');
+                }}
+                className="neumorphic p-2 rounded-lg hover:bg-accent transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>

@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 interface SpotifyPlayer {
   connect: () => Promise<boolean>;
   disconnect: () => void;
-  addListener: (event: string, callback: (data: any) => void) => void;
+  addListener: (event: string, callback: (data: unknown) => void) => void;
   removeListener: (event: string) => void;
-  getCurrentState: () => Promise<any>;
+  getCurrentState: () => Promise<WebPlaybackState | null>;
   setName: (name: string) => Promise<void>;
   getVolume: () => Promise<number>;
   setVolume: (volume: number) => Promise<void>;
@@ -56,7 +56,7 @@ export function useSpotifyPlayer() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<any>(null);
+  const [currentTrack, setCurrentTrack] = useState<WebPlaybackState['track_window']['current_track'] | null>(null);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const playerRef = useRef<SpotifyPlayer | null>(null);
@@ -158,7 +158,7 @@ export function useSpotifyPlayer() {
     }
 
     try {
-      const body: any = {};
+      const body: Record<string, unknown> = {};
       
       // If playlist context is provided, play from playlist
       if (playlistUri) {

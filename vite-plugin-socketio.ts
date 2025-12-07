@@ -454,7 +454,7 @@ export function socketIoPlugin(): Plugin {
             // Save track history with context (weekday, time, etc)
             if (finishedTrack && finishedTrack.addedBy) {
               // Use spotifyId if available, otherwise extract from id
-              const originalTrackId = (finishedTrack as any).spotifyId || (() => {
+              const originalTrackId = (finishedTrack as { spotifyId?: string }).spotifyId || (() => {
                 const lastDashIndex = finishedTrack.id.lastIndexOf('-');
                 if (lastDashIndex === -1) return finishedTrack.id;
                 const lastPart = finishedTrack.id.substring(lastDashIndex + 1);

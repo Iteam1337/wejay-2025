@@ -1,10 +1,10 @@
-import { Track } from "@/types/wejay";
+import { SearchTrack } from "@/types/wejay";
 import { Plus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TrackCardProps {
-  track: Track;
-  onAdd?: (track: Track) => void;
+  track: SearchTrack;
+  onAdd?: (track: SearchTrack) => void;
   isAdded?: boolean;
   showAddedBy?: boolean;
   userName?: string;

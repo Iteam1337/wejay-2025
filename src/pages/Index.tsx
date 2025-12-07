@@ -4,11 +4,12 @@ import { TrackCard } from "@/components/TrackCard";
 import { TabButton } from "@/components/TabButton";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { Playlist } from "@/components/Playlist";
-import { mockUsers, mockSearchResults, mockFavorites, mockPlaylistTracks } from "@/lib/mockData";
+import { mockUsers, mockFavorites, mockPlaylistTracks } from "@/lib/mockData";
 import { arrangeTracks } from "@/lib/dhondt";
-import { Track } from "@/types/wejay";
+import { Track, SearchTrack } from "@/types/wejay";
 import { toast } from "sonner";
-import { Music2, Heart, Search } from "lucide-react";
+import { Music2, Heart, Search, Loader2 } from "lucide-react";
+import { useSpotifySearch } from "@/hooks/useSpotifySearch";
 
 type Tab = "search" | "favorites";
 
@@ -21,21 +22,27 @@ const Index = () => {
 
   const currentUserId = "user-1";
 
-  const filteredSearchResults = useMemo(() => {
-    if (!searchQuery.trim()) return mockSearchResults;
-    const query = searchQuery.toLowerCase();
-    return mockSearchResults.filter(
-      track => 
-        track.name.toLowerCase().includes(query) ||
-        track.artist.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  const { results: spotifyResults, isLoading, error } = useSpotifySearch(
+    searchQuery,
+    activeTab === "search"
+  );
+
+  const searchResults: SearchTrack[] = useMemo(() => {
+    return spotifyResults.map(track => ({
+      id: track.id,
+      name: track.name,
+      artist: track.artists.map(a => a.name).join(", "),
+      album: track.album.name,
+      albumArt: track.album.images[0]?.url || "/placeholder.svg",
+      duration: Math.floor(track.duration_ms / 1000),
+    }));
+  }, [spotifyResults]);
 
   const arrangedPlaylist = useMemo(() => {
     return arrangeTracks(playlistTracks);
   }, [playlistTracks]);
 
-  const handleAddTrack = (track: Track) => {
+  const handleAddTrack = (track: SearchTrack) => {
     const newTrack: Track = {
       ...track,
       id: `${track.id}-${Date.now()}`,
@@ -123,8 +130,18 @@ const Index = () => {
             {/* Track List */}
             <div className="space-y-3">
               {activeTab === "search" ? (
-                filteredSearchResults.length > 0 ? (
-                  filteredSearchResults.map(track => (
+                isLoading ? (
+                  <div className="neumorphic p-8 text-center text-muted-foreground">
+                    <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin opacity-50" />
+                    <p>Söker på Spotify...</p>
+                  </div>
+                ) : error ? (
+                  <div className="neumorphic p-8 text-center text-destructive">
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>{error}</p>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map(track => (
                     <TrackCard
                       key={track.id}
                       track={track}
@@ -132,10 +149,15 @@ const Index = () => {
                       isAdded={addedTrackIds.has(track.id)}
                     />
                   ))
-                ) : (
+                ) : searchQuery.trim() ? (
                   <div className="neumorphic p-8 text-center text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>Inga resultat för "{searchQuery}"</p>
+                  </div>
+                ) : (
+                  <div className="neumorphic p-8 text-center text-muted-foreground">
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Sök efter låtar på Spotify</p>
                   </div>
                 )
               ) : (

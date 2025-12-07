@@ -1,10 +1,13 @@
-export interface Track {
+export interface SearchTrack {
   id: string;
   name: string;
   artist: string;
   album: string;
   albumArt: string;
   duration: number;
+}
+
+export interface Track extends SearchTrack {
   addedBy: string;
   addedAt: Date;
 }

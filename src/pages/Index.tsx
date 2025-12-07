@@ -83,8 +83,8 @@ const Index = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground hidden sm:block">
-                {myTracks.length} {myTracks.length === 1 ? "bidrag" : "bidrag"}
+              <span className="text-xs text-muted-foreground hidden sm:block uppercase">
+                {myTracks.length} BIDRAG
               </span>
               <div className="neumorphic w-8 h-8 rounded-full overflow-hidden">
                 <img 
@@ -111,18 +111,18 @@ const Index = () => {
                 active={activeTab === "search"} 
                 onClick={() => setActiveTab("search")}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 uppercase">
                   <Search className="w-4 h-4" />
-                  Sök
+                  SÖK
                 </span>
               </TabButton>
               <TabButton 
                 active={activeTab === "favorites"} 
                 onClick={() => setActiveTab("favorites")}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 uppercase">
                   <Heart className="w-4 h-4" />
-                  Favoriter
+                  FAVORITER
                 </span>
               </TabButton>
             </div>
@@ -133,7 +133,7 @@ const Index = () => {
                 isLoading ? (
                   <div className="neumorphic p-8 text-center text-muted-foreground">
                     <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin opacity-50" />
-                    <p>Söker på Spotify...</p>
+                    <p className="uppercase">SÖKER PÅ SPOTIFY...</p>
                   </div>
                 ) : error ? (
                   <div className="neumorphic p-8 text-center text-destructive">
@@ -157,7 +157,7 @@ const Index = () => {
                 ) : (
                   <div className="neumorphic p-8 text-center text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Sök efter låtar på Spotify</p>
+                    <p className="uppercase">SÖK EFTER LÅTAR PÅ SPOTIFY</p>
                   </div>
                 )
               ) : (
@@ -183,8 +183,8 @@ const Index = () => {
             {/* My Contributions */}
             {myTracks.length > 0 && (
               <div className="neumorphic p-4">
-                <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
-                  <span className="text-primary">Dina bidrag</span>
+                <h3 className="font-medium text-sm mb-3 flex items-center gap-2 uppercase">
+                  <span className="text-primary">DINA BIDRAG</span>
                   <span className="text-muted-foreground">({myTracks.length})</span>
                 </h3>
                 <div className="space-y-2">
@@ -202,9 +202,9 @@ const Index = () => {
                       <span className="text-xs text-muted-foreground">#{track.position}</span>
                     </div>
                   ))}
-                  {myTracks.length > 3 && (
-                    <p className="text-xs text-muted-foreground text-center pt-1">
-                      +{myTracks.length - 3} fler
+                    {myTracks.length > 3 && (
+                      <p className="text-xs text-muted-foreground text-center pt-1 uppercase">
+                        +{myTracks.length - 3} FLER
                     </p>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Play, Pause, SkipForward } from "lucide-react";
+import { Play, Pause, SkipForward, ExternalLink } from "lucide-react";
 import { Track } from "@/types/wejay";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +52,24 @@ export function SpotifyPlayer({
     }
   }, [elapsed, currentTrack]);
 
+  // Open Spotify client when starting playback
+  const handlePlayPause = useCallback(() => {
+    if (!isPlaying && currentTrack) {
+      // Extract the original Spotify track ID (before our timestamp suffix)
+      const spotifyTrackId = currentTrack.id.split('-')[0];
+      // Open Spotify URI - will open in Spotify app if installed, otherwise web player
+      window.open(`spotify:track:${spotifyTrackId}`, '_blank');
+    }
+    onPlayPause();
+  }, [isPlaying, currentTrack, onPlayPause]);
+
+  const openInSpotify = useCallback(() => {
+    if (currentTrack) {
+      const spotifyTrackId = currentTrack.id.split('-')[0];
+      window.open(`https://open.spotify.com/track/${spotifyTrackId}`, '_blank');
+    }
+  }, [currentTrack]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -62,7 +80,7 @@ export function SpotifyPlayer({
     <div className="flex items-center gap-4 flex-1">
       {/* Play/Pause Button as Logo */}
       <button
-        onClick={onPlayPause}
+        onClick={handlePlayPause}
         className={cn(
           "neumorphic w-12 h-12 flex items-center justify-center transition-all",
           isPlaying && "neumorphic-pressed"
@@ -78,11 +96,19 @@ export function SpotifyPlayer({
       {/* Track Info & Progress */}
       {currentTrack ? (
         <div className="flex-1 min-w-0 flex items-center gap-3">
-          <img 
-            src={currentTrack.albumArt} 
-            alt={currentTrack.album}
-            className="w-10 h-10 rounded object-cover flex-shrink-0"
-          />
+          <button 
+            onClick={openInSpotify}
+            className="relative group flex-shrink-0"
+          >
+            <img 
+              src={currentTrack.albumArt} 
+              alt={currentTrack.album}
+              className="w-10 h-10 rounded object-cover"
+            />
+            <div className="absolute inset-0 bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <ExternalLink className="w-4 h-4 text-white" />
+            </div>
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -116,18 +142,6 @@ export function SpotifyPlayer({
             <span className="text-gradient">WEJAY</span>
           </h1>
         </div>
-      )}
-
-      {/* Hidden Spotify Embed for actual playback */}
-      {currentTrack && isPlaying && (
-        <iframe
-          src={`https://open.spotify.com/embed/track/${currentTrack.id.split('-')[0]}?utm_source=generator&theme=0`}
-          width="0"
-          height="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy"
-          className="hidden"
-        />
       )}
     </div>
   );

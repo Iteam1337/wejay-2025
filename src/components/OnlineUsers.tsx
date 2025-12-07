@@ -12,10 +12,10 @@ export function OnlineUsers({ users, currentUserId }: OnlineUsersProps) {
 
   return (
     <div className="neumorphic p-4">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 uppercase">
         <Users className="w-4 h-4 text-primary" />
         <h3 className="font-medium text-sm">
-          Online ({onlineUsers.length})
+          ONLINE ({onlineUsers.length})
         </h3>
       </div>
       <div className="space-y-2">

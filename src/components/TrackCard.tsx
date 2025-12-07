@@ -47,10 +47,10 @@ export function TrackCard({
         </p>
         {showAddedBy && userName && (
           <p className={cn(
-            "text-xs mt-0.5 truncate",
+            "text-xs mt-0.5 truncate uppercase",
             isOwn ? "text-primary" : "text-muted-foreground"
           )}>
-            {isOwn ? "Du" : userName}
+            {isOwn ? "DU" : userName}
           </p>
         )}
       </div>

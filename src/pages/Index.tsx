@@ -77,8 +77,8 @@ const Index = () => {
               <div className="neumorphic w-10 h-10 flex items-center justify-center">
                 <Music2 className="w-5 h-5 text-primary" />
               </div>
-              <h1 className="text-xl font-medium tracking-wide">
-                <span className="text-gradient">Wejay</span>
+              <h1 className="text-xl font-medium tracking-wide uppercase">
+                <span className="text-gradient">WEJAY</span>
               </h1>
             </div>
             

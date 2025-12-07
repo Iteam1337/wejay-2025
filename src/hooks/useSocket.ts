@@ -207,11 +207,11 @@ export function useSocket() {
   }, []);
 
   // Event listeners (mock)
-  const on = (event: string, _callback: (...args: any[]) => void) => {
+  const on = (event: string, _callback: (...args: unknown[]) => void) => {
     console.log('Mock: Listening to event:', event);
   };
 
-  const off = (event: string, _callback: (...args: any[]) => void) => {
+  const off = (event: string, _callback: (...args: unknown[]) => void) => {
     console.log('Mock: Stopped listening to event:', event);
   };
 

@@ -18,7 +18,7 @@ This application uses Spotify's OAuth 2.0 authorization code flow with PKCE for 
    - **App name**: Wejay (or your preferred name)
    - **App description**: Collaborative music sessions with friends
    - **Website**: (optional)
-   - **Redirect URI**: `http://localhost:5173/callback` (for development)
+   - **Redirect URI**: `http://127.0.0.1:5173/callback` (for development)
    - **What are you building?**: Select appropriate options
 
 ### 2. Configure Redirect URIs
@@ -26,7 +26,8 @@ This application uses Spotify's OAuth 2.0 authorization code flow with PKCE for 
 In your Spotify app settings, add these redirect URIs:
 
 **Development:**
-- `http://localhost:5173/callback`
+- `http://127.0.0.1:5173/callback` ✅ (Working solution)
+- `http://localhost:5173/callback` ❌ (Security warning)
 
 **Production:**
 - `https://yourdomain.com/callback`
@@ -42,6 +43,7 @@ Create a `.env` file in the root directory:
 ```bash
 # .env
 VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+VITE_SPOTIFY_REDIRECT_URI=http://127.0.0.1:5173/callback
 ```
 
 Replace `your_spotify_client_id_here` with your actual Client ID from Spotify.
@@ -75,6 +77,7 @@ The app requests the following Spotify scopes:
 ## Troubleshooting
 
 ### "Redirect URI mismatch" error
+- Use `http://127.0.0.1:5173/callback` instead of `localhost`
 - Ensure the redirect URI in your Spotify app settings exactly matches the one in your app
 - Check for trailing slashes and http/https protocol
 
@@ -85,6 +88,10 @@ The app requests the following Spotify scopes:
 ### "Spotify Premium Required" message
 - The app requires Spotify Premium for full playback functionality
 - Free accounts can browse and add tracks but cannot control playback
+
+### "This redirect URI is not secure" warning
+- Spotify shows this for `localhost` but accepts `127.0.0.1`
+- Use `127.0.0.1:5173/callback` for development without warnings
 
 ## Development Notes
 

@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { SpotifyUser } from '@/types/wejay';
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-const REDIRECT_URI = `${window.location.origin}/callback`;
-const SCOPE = 'user-read-private user-read-email user-read-playback-state user-modify-playback-state streaming';
+const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI || `${window.location.origin}/callback`;
+const SCOPE = 'user-read-private user-read-email user-read-playback-state user-modify-playback-state streaming playlist-modify-private playlist-modify-public user-library-read';
 
 interface AuthState {
   user: SpotifyUser | null;
@@ -36,7 +36,7 @@ export function useSpotifyAuth() {
   const generateCodeChallenge = async (verifier: string): Promise<string> => {
     const data = new TextEncoder().encode(verifier);
     const digest = await crypto.subtle.digest('SHA-256', data);
-    return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
@@ -49,37 +49,63 @@ export function useSpotifyAuth() {
 
   const checkAuthStatus = useCallback(async () => {
     try {
-      const storedToken = localStorage.getItem('spotify_access_token');
-      const storedUser = localStorage.getItem('spotify_user');
+      // Get token from httpOnly cookie via backend
+      const tokenResponse = await fetch('/api/auth/token', {
+        credentials: 'include',
+      });
 
-      if (storedToken && storedUser) {
-        // Validate token by fetching user profile
-        const response = await fetch('https://api.spotify.com/v1/me', {
-          headers: {
-            'Authorization': `Bearer ${storedToken}`,
+      if (!tokenResponse.ok) {
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      const { access_token } = await tokenResponse.json();
+
+      // Validate token by fetching user profile
+      const userResponse = await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+
+      if (userResponse.ok) {
+        const user = await userResponse.json();
+        setAuthState({
+          user: {
+            id: user.id,
+            display_name: user.display_name,
+            email: user.email,
+            images: user.images || [],
+            country: user.country,
+            product: user.product,
           },
+          accessToken: access_token,
+          isLoading: false,
+          error: null,
+        });
+        
+        // Store user in localStorage for quick access (not sensitive)
+        localStorage.setItem('spotify_user', JSON.stringify({
+          id: user.id,
+          display_name: user.display_name,
+          email: user.email,
+          images: user.images || [],
+          country: user.country,
+          product: user.product,
+        }));
+        return;
+      } else if (userResponse.status === 401) {
+        // Token expired, try to refresh
+        console.log('Token expired, attempting refresh...');
+        const refreshResponse = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
         });
 
-        if (response.ok) {
-          const user = await response.json();
-          setAuthState({
-            user: {
-              id: user.id,
-              display_name: user.display_name,
-              email: user.email,
-              images: user.images || [],
-              country: user.country,
-              product: user.product,
-            },
-            accessToken: storedToken,
-            isLoading: false,
-            error: null,
-          });
+        if (refreshResponse.ok) {
+          // Retry with new token
+          checkAuthStatus();
           return;
-        } else {
-          // Token is invalid, clear storage
-          localStorage.removeItem('spotify_access_token');
-          localStorage.removeItem('spotify_user');
         }
       }
 
@@ -99,8 +125,30 @@ export function useSpotifyAuth() {
       const verifier = generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
 
-      // Store verifier for callback
-      sessionStorage.setItem('spotify_code_verifier', verifier);
+      // Generate state parameter for security
+      const state = Math.random().toString(36).substring(2, 15);
+
+      // Store verifier on backend server (not in localStorage!)
+      console.log('Storing verifier on backend...');
+      const storeResponse = await fetch('/api/auth/store-verifier', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verifier,
+          state,
+        }),
+      });
+
+      if (!storeResponse.ok) {
+        throw new Error('Failed to store verifier on backend');
+      }
+
+      console.log('Verifier stored on backend successfully');
+
+      // Save only state in localStorage (doesn't matter if it gets cleared)
+      localStorage.setItem('spotify_auth_state', state);
 
       const authUrl = new URL('https://accounts.spotify.com/authorize');
       authUrl.searchParams.append('response_type', 'code');
@@ -109,7 +157,11 @@ export function useSpotifyAuth() {
       authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.append('code_challenge_method', 'S256');
       authUrl.searchParams.append('code_challenge', challenge);
+      authUrl.searchParams.append('state', state);
 
+      console.log('Initiating Spotify auth with redirect URI:', REDIRECT_URI);
+      console.log('State:', state);
+      
       // Redirect to Spotify auth
       window.location.href = authUrl.toString();
     } catch (error) {
@@ -119,32 +171,33 @@ export function useSpotifyAuth() {
         error: 'Failed to initiate login',
       }));
     }
-  }, []);
+  }, [REDIRECT_URI]);
 
-  const handleCallback = useCallback(async (code: string) => {
+  const handleCallback = useCallback(async (code: string, state: string) => {
     try {
-      const verifier = sessionStorage.getItem('spotify_code_verifier');
-      if (!verifier) {
-        throw new Error('Code verifier not found');
-      }
-
-      // Exchange code for access token
-      const response = await fetch('https://accounts.spotify.com/api/token', {
+      console.log('Handling Spotify callback with code:', code.substring(0, 10) + '...');
+      console.log('State from URL:', state);
+      
+      // Exchange code for access token via backend proxy
+      // Backend will retrieve code_verifier using the state parameter
+      console.log('Exchanging code for token via backend with redirect URI:', REDIRECT_URI);
+      
+      const response = await fetch('/api/auth/exchange-token', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
+        body: JSON.stringify({
           code: code,
           redirect_uri: REDIRECT_URI,
-          client_id: CLIENT_ID,
-          code_verifier: verifier,
+          state: state,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to exchange code for token');
+        const errorData = await response.text();
+        console.error('Token exchange failed:', response.status, errorData);
+        throw new Error(`Failed to exchange code for token: ${response.status} ${errorData}`);
       }
 
       const tokenData = await response.json();
@@ -171,8 +224,7 @@ export function useSpotifyAuth() {
         product: userData.product,
       };
 
-      // Store auth data
-      localStorage.setItem('spotify_access_token', tokenData.access_token);
+      // Store user data (tokens are in httpOnly cookies)
       localStorage.setItem('spotify_user', JSON.stringify(user));
 
       setAuthState({
@@ -183,24 +235,31 @@ export function useSpotifyAuth() {
       });
 
       // Clean up
-      sessionStorage.removeItem('spotify_code_verifier');
+      localStorage.removeItem('spotify_auth_state');
 
       // Redirect to main app
-      window.location.href = '/';
+      window.location.href = '/rooms';
     } catch (error) {
       console.error('Callback handling failed:', error);
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: 'Failed to complete authentication',
+        error: error instanceof Error ? error.message : 'Failed to complete authentication',
       }));
     }
-  }, []);
+  }, [REDIRECT_URI]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('spotify_access_token');
+  const logout = useCallback(async () => {
+    // Clear cookies on server
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    
+    // Clear localStorage
     localStorage.removeItem('spotify_user');
-    sessionStorage.removeItem('spotify_code_verifier');
+    localStorage.removeItem('spotify_code_verifier');
+    localStorage.removeItem('spotify_auth_state');
     
     setAuthState({
       user: null,

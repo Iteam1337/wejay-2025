@@ -1,14 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { SearchBar } from "@/components/SearchBar";
 import { TrackCard } from "@/components/TrackCard";
 import { TabButton } from "@/components/TabButton";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { Playlist } from "@/components/Playlist";
+import { SpotifyPlayer } from "@/components/SpotifyPlayer";
 import { mockUsers, mockFavorites, mockPlaylistTracks } from "@/lib/mockData";
 import { arrangeTracks } from "@/lib/dhondt";
 import { Track, SearchTrack } from "@/types/wejay";
 import { toast } from "sonner";
-import { Music2, Heart, Search, Loader2 } from "lucide-react";
+import { Heart, Search, Loader2 } from "lucide-react";
 import { useSpotifySearch } from "@/hooks/useSpotifySearch";
 
 type Tab = "search" | "favorites";
@@ -19,6 +20,7 @@ const Index = () => {
   const [playlistTracks, setPlaylistTracks] = useState<Track[]>(mockPlaylistTracks);
   const [addedTrackIds, setAddedTrackIds] = useState<Set<string>>(new Set());
   const [users, setUsers] = useState(mockUsers);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const currentUserId = "user-1";
 
@@ -41,6 +43,37 @@ const Index = () => {
   const arrangedPlaylist = useMemo(() => {
     return arrangeTracks(playlistTracks);
   }, [playlistTracks]);
+
+  const currentTrack = arrangedPlaylist[0] || null;
+
+  const handleTrackEnd = useCallback(() => {
+    if (arrangedPlaylist.length > 0) {
+      // Remove the first track (just finished playing)
+      setPlaylistTracks(prev => {
+        const firstTrackId = arrangedPlaylist[0]?.id;
+        return prev.filter(t => t.id !== firstTrackId);
+      });
+      toast.success("NÄSTA LÅT", {
+        description: arrangedPlaylist[1]?.name || "Kön är tom",
+      });
+    }
+  }, [arrangedPlaylist]);
+
+  const handleSkip = useCallback(() => {
+    if (arrangedPlaylist.length > 0) {
+      handleTrackEnd();
+    }
+  }, [handleTrackEnd, arrangedPlaylist]);
+
+  const handlePlayPause = useCallback(() => {
+    if (arrangedPlaylist.length === 0) {
+      toast.error("KÖN ÄR TOM", {
+        description: "Lägg till låtar för att spela",
+      });
+      return;
+    }
+    setIsPlaying(prev => !prev);
+  }, [arrangedPlaylist]);
 
   const handleAddTrack = (track: SearchTrack) => {
     const newTrack: Track = {
@@ -69,20 +102,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header with Player */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="neumorphic w-10 h-10 flex items-center justify-center">
-                <Music2 className="w-5 h-5 text-primary" />
-              </div>
-              <h1 className="text-xl font-medium tracking-wide uppercase">
-                <span className="text-gradient">WEJAY</span>
-              </h1>
-            </div>
+        <div className="container py-3">
+          <div className="flex items-center justify-between gap-4">
+            <SpotifyPlayer
+              currentTrack={currentTrack}
+              onTrackEnd={handleTrackEnd}
+              isPlaying={isPlaying}
+              onPlayPause={handlePlayPause}
+              onSkip={handleSkip}
+            />
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs text-muted-foreground hidden sm:block uppercase">
                 {myTracks.length} BIDRAG
               </span>

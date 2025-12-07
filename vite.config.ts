@@ -15,8 +15,8 @@ export default defineConfig(({ mode }) => ({
         rewrite: () => '/api/token',
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq, req) => {
-            const clientId = process.env.VITE_SPOTIFY_CLIENT_ID;
-            const clientSecret = process.env.VITE_SPOTIFY_CLIENT_SECRET;
+            const clientId = process.env.CLIENT_ID;
+            const clientSecret = process.env.CLIENT_SECRET;
             const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
             proxyReq.setHeader('Authorization', `Basic ${auth}`);
             proxyReq.setHeader('Content-Type', 'application/x-www-form-urlencoded');

@@ -17,20 +17,20 @@ export function Playlist({ tracks, users, currentUserId }: PlaylistProps) {
   return (
     <div className="neumorphic p-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 uppercase">
           <ListMusic className="w-4 h-4 text-primary" />
-          <h3 className="font-medium">Kö</h3>
+          <h3 className="font-medium">KÖ</h3>
           <span className="text-muted-foreground text-sm">
-            ({tracks.length} {tracks.length === 1 ? "låt" : "låtar"})
+            ({tracks.length} {tracks.length === 1 ? "LÅT" : "LÅTAR"})
           </span>
         </div>
       </div>
 
       {tracks.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="text-center py-8 text-muted-foreground uppercase">
           <ListMusic className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Inga låtar i kön ännu</p>
-          <p className="text-sm mt-1">Sök eller välj från favoriter</p>
+          <p>INGA LÅTAR I KÖN ÄNNU</p>
+          <p className="text-sm mt-1">SÖK ELLER VÄLJ FRÅN FAVORITER</p>
         </div>
       ) : (
         <div className="space-y-3">

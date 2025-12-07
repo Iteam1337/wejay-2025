@@ -27,8 +27,8 @@ export function UserBadge({ user, isCurrentUser = false }: UserBadgeProps) {
           {isCurrentUser ? "Du" : user.name}
         </p>
         {user.tracksAdded > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {user.tracksAdded} {user.tracksAdded === 1 ? "låt" : "låtar"}
+          <p className="text-xs text-muted-foreground uppercase">
+            {user.tracksAdded} {user.tracksAdded === 1 ? "LÅT" : "LÅTAR"}
           </p>
         )}
       </div>

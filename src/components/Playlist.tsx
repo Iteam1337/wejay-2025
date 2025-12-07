@@ -11,7 +11,7 @@ interface PlaylistProps {
 export function Playlist({ tracks, users, currentUserId }: PlaylistProps) {
   const getUserName = (userId: string) => {
     const user = users.find(u => u.id === userId);
-    return user?.name || "Okänd";
+    return user?.name || "Unknown";
   };
 
   return (
@@ -19,9 +19,9 @@ export function Playlist({ tracks, users, currentUserId }: PlaylistProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 uppercase">
           <ListMusic className="w-4 h-4 text-primary" />
-          <h3 className="font-medium">KÖ</h3>
+          <h3 className="font-medium">QUEUE</h3>
           <span className="text-muted-foreground text-sm">
-            ({tracks.length} {tracks.length === 1 ? "LÅT" : "LÅTAR"})
+            ({tracks.length} {tracks.length === 1 ? "TRACK" : "TRACKS"})
           </span>
         </div>
       </div>
@@ -29,8 +29,8 @@ export function Playlist({ tracks, users, currentUserId }: PlaylistProps) {
       {tracks.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground uppercase">
           <ListMusic className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>INGA LÅTAR I KÖN ÄNNU</p>
-          <p className="text-sm mt-1">SÖK ELLER VÄLJ FRÅN FAVORITER</p>
+          <p>NO TRACKS IN QUEUE YET</p>
+          <p className="text-sm mt-1">SEARCH OR PICK FROM FAVORITES</p>
         </div>
       ) : (
         <div className="space-y-3">

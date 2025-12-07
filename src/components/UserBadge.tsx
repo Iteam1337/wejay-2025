@@ -24,11 +24,11 @@ export function UserBadge({ user, isCurrentUser = false }: UserBadgeProps) {
       </div>
       <div className="min-w-0">
         <p className="text-sm font-medium truncate">
-          {isCurrentUser ? "Du" : user.name}
+          {isCurrentUser ? "You" : user.name}
         </p>
         {user.tracksAdded > 0 && (
           <p className="text-xs text-muted-foreground uppercase">
-            {user.tracksAdded} {user.tracksAdded === 1 ? "LÅT" : "LÅTAR"}
+            {user.tracksAdded} {user.tracksAdded === 1 ? "TRACK" : "TRACKS"}
           </p>
         )}
       </div>

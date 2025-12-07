@@ -24,30 +24,42 @@ const Rooms = () => {
       return;
     }
 
-    // Mock loading rooms - in real app this would be from API
-    const mockRooms: Room[] = [
-      {
-        id: 'room-1',
-        name: 'Friday Vibes',
-        createdBy: 'user-1',
-        createdAt: new Date('2024-01-15'),
-        users: [user],
-        isActive: true,
-      },
-      {
-        id: 'room-2',
-        name: 'Study Session',
-        createdBy: 'user-2',
-        createdAt: new Date('2024-01-14'),
-        users: [user],
-        isActive: false,
-      },
-    ];
+    // Load rooms from API
+    const loadRooms = async () => {
+      try {
+        console.log('[Rooms] Fetching rooms for user:', user.id);
+        const response = await fetch('/api/rooms');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[Rooms] Got rooms from API:', data);
+          console.log('[Rooms] Total rooms:', data.length);
+          
+          // Filter rooms where user is a member
+          const userRooms = data.filter((room: any) => {
+            const isMember = room.users.includes(user.id);
+            console.log(`[Rooms] Room ${room.name}: user is member?`, isMember, 'Users:', room.users);
+            return isMember;
+          });
+          
+          console.log('[Rooms] User rooms after filter:', userRooms.length);
+          
+          setRooms(userRooms.map((room: any) => ({
+            ...room,
+            createdAt: new Date(room.createdAt),
+            users: [user], // Simplified for now
+          })));
+        } else {
+          console.error('[Rooms] API response not ok:', response.status);
+        }
+      } catch (error) {
+        console.error('[Rooms] Failed to load rooms:', error);
+        toast.error('Failed to load rooms');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    setTimeout(() => {
-      setRooms(mockRooms);
-      setIsLoading(false);
-    }, 1000);
+    loadRooms();
   }, [isAuthenticated, user, navigate]);
 
   const handleCreateRoom = async () => {
@@ -59,26 +71,58 @@ const Rooms = () => {
     setIsCreating(true);
     
     try {
-      // Mock creating room - in real app this would be API call
+      const response = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newRoomName.trim(),
+          createdBy: user!.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create room');
+      }
+
+      const createdRoom = await response.json();
+      const isExisting = response.status === 200; // 200 = joined existing, 201 = created new
+      
       const newRoom: Room = {
-        id: `room-${Date.now()}`,
-        name: newRoomName.trim(),
-        createdBy: user!.id,
-        createdAt: new Date(),
+        ...createdRoom,
+        createdAt: new Date(createdRoom.createdAt),
         users: [user!],
-        isActive: true,
       };
 
-      setRooms(prev => [newRoom, ...prev]);
+      // Update or add to rooms list
+      setRooms(prev => {
+        const existing = prev.find(r => r.id === newRoom.id);
+        if (existing) {
+          return prev.map(r => r.id === newRoom.id ? newRoom : r);
+        }
+        return [newRoom, ...prev];
+      });
+      
       setNewRoomName('');
       
-      toast.success('Room created successfully!', {
-        description: `${newRoom.name} is ready for friends to join.`,
-      });
+      if (isExisting) {
+        toast.success(`Joined existing room: ${newRoom.name}`, {
+          description: `${createdRoom.users.length} people are already here!`,
+        });
+      } else {
+        toast.success('Room created successfully!', {
+          description: `${newRoom.name} is ready for friends to join.`,
+        });
+      }
 
       // Copy room link automatically
       await handleCopyRoomLink(newRoom.id);
+      
+      // Navigate to room
+      navigate(`/room/${newRoom.id}`);
     } catch (error) {
+      console.error('Failed to create room:', error);
       toast.error('Failed to create room');
     } finally {
       setIsCreating(false);
@@ -87,11 +131,11 @@ const Rooms = () => {
 
   const handleJoinRoom = (roomId: string) => {
     // Navigate to main app with room ID
-    navigate(`/app/${roomId}`);
+    navigate(`/room/${roomId}`);
   };
 
   const handleCopyRoomLink = async (roomId: string) => {
-    const roomUrl = `${window.location.origin}/app/${roomId}`;
+    const roomUrl = `${window.location.origin}/room/${roomId}`;
     
     try {
       await navigator.clipboard.writeText(roomUrl);
@@ -164,16 +208,23 @@ const Rooms = () => {
           <Card className="neumorphic p-6">
             <h2 className="text-xl font-semibold mb-4 uppercase">Create New Room</h2>
             <div className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="roomName">Room Name</Label>
                 <Input
                   id="roomName"
-                  placeholder="Enter room name..."
+                  placeholder="friday-vibes"
                   value={newRoomName}
                   onChange={(e) => setNewRoomName(e.target.value)}
                   className="neumorphic"
                   onKeyDown={(e) => e.key === 'Enter' && handleCreateRoom()}
                 />
+                {newRoomName.trim() && (
+                  <p className="text-xs text-muted-foreground">
+                    Room URL: <span className="text-primary font-mono">
+                      /room/{newRoomName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')}
+                    </span>
+                  </p>
+                )}
               </div>
               <Button 
                 onClick={handleCreateRoom}

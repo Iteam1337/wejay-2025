@@ -53,8 +53,8 @@ const Index = () => {
         const firstTrackId = arrangedPlaylist[0]?.id;
         return prev.filter(t => t.id !== firstTrackId);
       });
-      toast.success("NÄSTA LÅT", {
-        description: arrangedPlaylist[1]?.name || "Kön är tom",
+      toast.success("NEXT TRACK", {
+        description: arrangedPlaylist[1]?.name || "Queue is empty",
       });
     }
   }, [arrangedPlaylist]);
@@ -67,8 +67,8 @@ const Index = () => {
 
   const handlePlayPause = useCallback(() => {
     if (arrangedPlaylist.length === 0) {
-      toast.error("KÖN ÄR TOM", {
-        description: "Lägg till låtar för att spela",
+      toast.error("QUEUE IS EMPTY", {
+        description: "Add tracks to start playing",
       });
       return;
     }
@@ -93,8 +93,8 @@ const Index = () => {
         : u
     ));
 
-    toast.success(`${track.name} tillagd i kön`, {
-      description: "Låten är arrangerad enligt D'Hondt",
+    toast.success(`${track.name} added to queue`, {
+      description: "Track arranged using D'Hondt method",
     });
   };
 
@@ -116,12 +116,12 @@ const Index = () => {
             
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs text-muted-foreground hidden sm:block uppercase">
-                {myTracks.length} BIDRAG
+                {myTracks.length} {myTracks.length === 1 ? "TRACK" : "TRACKS"}
               </span>
               <div className="neumorphic w-8 h-8 rounded-full overflow-hidden">
                 <img 
                   src={mockUsers[0].avatar} 
-                  alt="Du"
+                  alt="You"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -145,7 +145,7 @@ const Index = () => {
               >
                 <span className="flex items-center gap-2 uppercase">
                   <Search className="w-4 h-4" />
-                  SÖK
+                  SEARCH
                 </span>
               </TabButton>
               <TabButton 
@@ -154,7 +154,7 @@ const Index = () => {
               >
                 <span className="flex items-center gap-2 uppercase">
                   <Heart className="w-4 h-4" />
-                  FAVORITER
+                  FAVORITES
                 </span>
               </TabButton>
             </div>
@@ -165,7 +165,7 @@ const Index = () => {
                 isLoading ? (
                   <div className="neumorphic p-8 text-center text-muted-foreground">
                     <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin opacity-50" />
-                    <p className="uppercase">SÖKER PÅ SPOTIFY...</p>
+                    <p className="uppercase">SEARCHING SPOTIFY...</p>
                   </div>
                 ) : error ? (
                   <div className="neumorphic p-8 text-center text-destructive">
@@ -184,12 +184,12 @@ const Index = () => {
                 ) : searchQuery.trim() ? (
                   <div className="neumorphic p-8 text-center text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Inga resultat för "{searchQuery}"</p>
+                    <p className="uppercase">NO RESULTS FOR "{searchQuery}"</p>
                   </div>
                 ) : (
                   <div className="neumorphic p-8 text-center text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="uppercase">SÖK EFTER LÅTAR PÅ SPOTIFY</p>
+                    <p className="uppercase">SEARCH FOR TRACKS ON SPOTIFY</p>
                   </div>
                 )
               ) : (
@@ -216,7 +216,7 @@ const Index = () => {
             {myTracks.length > 0 && (
               <div className="neumorphic p-4">
                 <h3 className="font-medium text-sm mb-3 flex items-center gap-2 uppercase">
-                  <span className="text-primary">DINA BIDRAG</span>
+                  <span className="text-primary">YOUR TRACKS</span>
                   <span className="text-muted-foreground">({myTracks.length})</span>
                 </h3>
                 <div className="space-y-2">
@@ -236,7 +236,7 @@ const Index = () => {
                   ))}
                     {myTracks.length > 3 && (
                       <p className="text-xs text-muted-foreground text-center pt-1 uppercase">
-                        +{myTracks.length - 3} FLER
+                        +{myTracks.length - 3} MORE
                     </p>
                   )}
                 </div>

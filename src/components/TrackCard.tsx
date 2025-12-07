@@ -50,7 +50,7 @@ export function TrackCard({
             "text-xs mt-0.5 truncate uppercase",
             isOwn ? "text-primary" : "text-muted-foreground"
           )}>
-            {isOwn ? "DU" : userName}
+            {isOwn ? "YOU" : userName}
           </p>
         )}
       </div>

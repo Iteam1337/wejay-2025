@@ -81,7 +81,11 @@ export function spotifyAuthPlugin(): Plugin {
 
             req.on('end', async () => {
               try {
-                const { code, redirect_uri, state } = JSON.parse(body) as any;
+                const { code, redirect_uri, state } = JSON.parse(body) as { 
+  code: string; 
+  redirect_uri: string; 
+  state: string; 
+};
 
                 console.log(`[Spotify Auth] Exchange token for state: ${state}`);
 
@@ -151,7 +155,12 @@ export function spotifyAuthPlugin(): Plugin {
                   }),
                 });
 
-                const data = await response.json() as any;
+                const data = await response.json() as { 
+  access_token: string; 
+  refresh_token: string; 
+  expires_in?: number; 
+  [key: string]: unknown; 
+};
 
                 if (!response.ok) {
                   console.error('[Spotify Auth] Spotify rejected:', data);
@@ -254,7 +263,12 @@ export function spotifyAuthPlugin(): Plugin {
               }),
             });
 
-            const data = await response.json() as any;
+            const data = await response.json() as { 
+  access_token: string; 
+  refresh_token: string; 
+  expires_in?: number; 
+  [key: string]: unknown; 
+};
 
             if (!response.ok) {
               console.error('[Spotify Auth] Refresh failed:', data);

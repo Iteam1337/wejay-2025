@@ -106,7 +106,7 @@ export function queueApiPlugin(): Plugin {
                 const queue = queueData ? JSON.parse(queueData) : { tracks: [] };
 
                 // Find the track
-                const trackIndex = queue.tracks.findIndex((t: any) => t.id === trackId);
+                const trackIndex = queue.tracks.findIndex((t: { id: string }) => t.id === trackId);
                 
                 if (trackIndex === -1) {
                   res.statusCode = 404;

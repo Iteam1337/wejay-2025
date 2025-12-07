@@ -35,7 +35,7 @@ const Rooms = () => {
           console.log('[Rooms] Total rooms:', data.length);
           
           // Filter rooms where user is a member
-          const userRooms = data.filter((room: any) => {
+          const userRooms = data.filter((room: Room & { users: string[] }) => {
             const isMember = room.users.includes(user.id);
             console.log(`[Rooms] Room ${room.name}: user is member?`, isMember, 'Users:', room.users);
             return isMember;
@@ -43,7 +43,7 @@ const Rooms = () => {
           
           console.log('[Rooms] User rooms after filter:', userRooms.length);
           
-          setRooms(userRooms.map((room: any) => ({
+          setRooms(userRooms.map((room: Room & { createdAt: string | Date }) => ({
             ...room,
             createdAt: new Date(room.createdAt),
             users: [user], // Simplified for now

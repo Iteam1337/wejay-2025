@@ -316,7 +316,7 @@ export function roomsApiPlugin(): Plugin {
                 if (queueData) {
                   const queue = JSON.parse(queueData);
                   if (queue.tracks && queue.tracks.length > 0) {
-                    const trackUris = queue.tracks.map((t: any) => `spotify:track:${t.spotifyId}`);
+                    const trackUris = queue.tracks.map((t: { spotifyId: string }) => `spotify:track:${t.spotifyId}`);
                     
                     await fetch(
                       `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,

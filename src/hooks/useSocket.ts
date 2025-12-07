@@ -80,7 +80,7 @@ export function useSocket() {
     // Queue events
     socket.on('queue:state', ({ tracks: queueTracks, playbackState: state }) => {
       console.log('[Socket.IO] Received queue state:', queueTracks.length, 'tracks');
-      setTracks(queueTracks.map((t: any) => ({
+      setTracks(queueTracks.map((t: Omit<Track, 'addedAt'> & { addedAt: string }) => ({
         ...t,
         addedAt: new Date(t.addedAt),
       })));
@@ -89,7 +89,7 @@ export function useSocket() {
 
     socket.on('queue:updated', ({ tracks: queueTracks }) => {
       console.log('[Socket.IO] Queue updated:', queueTracks.length, 'tracks');
-      setTracks(queueTracks.map((t: any) => ({
+      setTracks(queueTracks.map((t: Omit<Track, 'addedAt'> & { addedAt: string }) => ({
         ...t,
         addedAt: new Date(t.addedAt),
       })));

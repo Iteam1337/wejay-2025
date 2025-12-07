@@ -9,7 +9,7 @@ interface AuthContextType {
   error: string | null;
   login: () => void;
   logout: () => void;
-  handleCallback: (code: string) => Promise<void>;
+  handleCallback: (code: string, state: string) => Promise<void>;
   checkAuthStatus: () => Promise<void>;
   isAuthenticated: boolean;
   isPremium: boolean;

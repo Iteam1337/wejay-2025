@@ -1,10 +1,22 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { spotifyAuthPlugin } from "./vite-plugin-spotify-auth";
+import { roomsApiPlugin } from "./vite-plugin-rooms-api";
+import { queueApiPlugin } from "./vite-plugin-queue-api";
+import { socketIoPlugin } from "./vite-plugin-socketio";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  // Make CLIENT_SECRET available to process.env for server-side code
+  process.env.CLIENT_SECRET = env.CLIENT_SECRET;
+  process.env.VITE_SPOTIFY_CLIENT_ID = env.VITE_SPOTIFY_CLIENT_ID;
+
+  return {
   server: {
     host: "::",
     port: 8080,
@@ -30,10 +42,18 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(), 
+    spotifyAuthPlugin(),
+    roomsApiPlugin(),
+    queueApiPlugin(),
+    socketIoPlugin(),
+    mode === "development" && componentTagger()
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+};
+});

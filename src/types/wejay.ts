@@ -10,6 +10,7 @@ export interface SearchTrack {
 export interface Track extends SearchTrack {
   addedBy: string;
   addedAt: Date;
+  spotifyId: string; // Original Spotify track ID (without timestamp)
 }
 
 export interface User {
@@ -40,4 +41,6 @@ export interface Room {
   createdAt: Date;
   users: SpotifyUser[];
   isActive: boolean;
+  spotifyPlaylistId?: string;
+  spotifyPlaylistUrl?: string;
 }

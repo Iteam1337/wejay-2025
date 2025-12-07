@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Play, Pause, SkipForward, ExternalLink } from "lucide-react";
+import { Play, Pause, SkipForward, ExternalLink, Crown } from "lucide-react";
 import { Track } from "@/types/wejay";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SpotifyPlayerProps {
   currentTrack: Track | null;
@@ -18,6 +19,7 @@ export function SpotifyPlayer({
   onPlayPause,
   onSkip 
 }: SpotifyPlayerProps) {
+  const { user, isPremium } = useAuth();
   const [progress, setProgress] = useState(0);
   const [elapsed, setElapsed] = useState(0);
 
@@ -57,11 +59,17 @@ export function SpotifyPlayer({
     if (!isPlaying && currentTrack) {
       // Extract the original Spotify track ID (before our timestamp suffix)
       const spotifyTrackId = currentTrack.id.split('-')[0];
-      // Open Spotify URI - will open in Spotify app if installed, otherwise web player
-      window.open(`spotify:track:${spotifyTrackId}`, '_blank');
+      
+      if (isPremium) {
+        // Premium users get full Spotify integration
+        window.open(`spotify:track:${spotifyTrackId}`, '_blank');
+      } else {
+        // Free users get limited functionality
+        window.open(`https://open.spotify.com/track/${spotifyTrackId}`, '_blank');
+      }
     }
     onPlayPause();
-  }, [isPlaying, currentTrack, onPlayPause]);
+  }, [isPlaying, currentTrack, onPlayPause, isPremium]);
 
   const openInSpotify = useCallback(() => {
     if (currentTrack) {
@@ -78,6 +86,14 @@ export function SpotifyPlayer({
 
   return (
     <div className="flex items-center gap-4 flex-1">
+      {/* Premium Badge */}
+      {isPremium && user && (
+        <div className="neumorphic px-2 py-1 rounded-full flex items-center gap-1">
+          <Crown className="w-3 h-3 text-yellow-500" />
+          <span className="text-xs font-medium text-yellow-600">Premium</span>
+        </div>
+      )}
+
       {/* Play/Pause Button as Logo */}
       <button
         onClick={handlePlayPause}
@@ -85,6 +101,8 @@ export function SpotifyPlayer({
           "neumorphic w-12 h-12 flex items-center justify-center transition-all",
           isPlaying && "neumorphic-pressed"
         )}
+        disabled={!isPremium && currentTrack !== null}
+        title={!isPremium ? "Spotify Premium required for playback" : "Play/Pause"}
       >
         {isPlaying ? (
           <Pause className="w-5 h-5 text-primary fill-current" />

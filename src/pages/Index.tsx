@@ -27,7 +27,8 @@ const Index = () => {
     users: socketUsers, 
     joinRoom, 
     leaveRoom,
-    addTrack: socketAddTrack 
+    addTrack: socketAddTrack,
+    simulateQueueUpdate 
   } = useSocket();
   
   const [activeTab, setActiveTab] = useState<Tab>("search");
@@ -75,6 +76,18 @@ const Index = () => {
       })));
     }
   }, [socketUsers]);
+
+  // Demo function to simulate queue updates from other users
+  const handleSimulateQueueUpdate = () => {
+    const demoTracks = [
+      { name: "Bohemian Rhapsody", user: "Alice" },
+      { name: "Stairway to Heaven", user: "Bob" },
+      { name: "Hotel California", user: "Alice" },
+    ];
+    
+    const randomTrack = demoTracks[Math.floor(Math.random() * demoTracks.length)];
+    simulateQueueUpdate(randomTrack.name, randomTrack.user);
+  };
 
   const searchResults: SearchTrack[] = useMemo(() => {
     return spotifyResults.map(track => ({
@@ -170,6 +183,15 @@ const Index = () => {
               </div>
               {isConnected && (
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              )}
+              {currentRoom && process.env.NODE_ENV === 'development' && (
+                <button
+                  onClick={handleSimulateQueueUpdate}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  title="Demo: Simulate queue update from other user"
+                >
+                  Demo
+                </button>
               )}
             </div>
 

@@ -1,0 +1,51 @@
+apiVersion: redis.redis.opstreelabs.in/v1beta1
+kind: RedisCluster
+metadata:
+  name: wejay-redis
+  namespace: wejay
+spec:
+  clusterSize: 1
+  clusterVersion: v7.2.3
+  persistenceEnabled: true
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: "fast-ssd"
+  redisExporter:
+    enabled: true
+    image: oliver006/redis_exporter:latest
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+---
+# Service for Redis connection
+apiVersion: v1
+kind: Service
+metadata:
+  name: wejay-redis-master
+  namespace: wejay
+  labels:
+    app: wejay-redis
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: wejay-redis
+    role: master
+  type: ClusterIP

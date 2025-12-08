@@ -27,9 +27,11 @@ spec:
       labels:
         app: wejay
     spec:
+      imagePullSecrets:
+      - name: regcred
       containers:
         - name: wejay
-          image: ghcr.io/iteam1337/wejay:0.1.0 # {"$imagepolicy": "flux-system:wejay"}
+          image: ghcr.io/iteam1337/wejay-2025:main
           ports:
             - containerPort: 8080
           env:

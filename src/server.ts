@@ -1,4 +1,4 @@
-import * as express from 'express';
+const express = require('express');
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from 'redis';

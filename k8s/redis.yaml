@@ -1,4 +1,4 @@
-apiVersion: redis.redis.opstreelabs.in/v1beta1
+apiVersion: redis.redis.opstreelabs.in/v1beta2
 kind: RedisCluster
 metadata:
   name: wejay-redis
@@ -14,7 +14,7 @@ spec:
         resources:
           requests:
             storage: 1Gi
-        storageClassName: "fast-ssd"
+        storageClassName: "harvester"
   redisExporter:
     enabled: true
     image: oliver006/redis_exporter:latest

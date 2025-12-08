@@ -27,6 +27,7 @@ spec:
       labels:
         app: wejay
     spec:
+      serviceAccountName: wejay
       imagePullSecrets:
       - name: regcred
       containers:

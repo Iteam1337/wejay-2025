@@ -105,7 +105,7 @@ export function SpotifyPlayer({
       // Play from calculated position
       play(spotifyUri, startPosition);
     }
-  }, [currentTrack?.id, isReady, isPremium, play, playbackState, playbackMode]);
+  }, [currentTrack?.id, isReady, isPremium, play, playbackState, playbackMode, currentTrack]);
 
   // Track ended - call onTrackEnd
   useEffect(() => {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Users, Copy, Check, Loader2 } from 'lucide-react';
 import { Room } from '@/types/wejay';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 const Rooms = () => {
   const { user, isAuthenticated, logout } = useAuth();

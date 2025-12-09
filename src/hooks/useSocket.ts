@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Room, Track, SpotifyUser } from '@/types/wejay';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { io, Socket } from 'socket.io-client';
 
 interface SocketState {

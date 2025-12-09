@@ -1,17 +1,21 @@
-import express from 'express';
+import Koa from 'koa';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { join } from 'path';
+import mount from 'koa-mount';
+import serve from 'koa-static';
+import bodyParser from 'koa-bodyparser';
+import cors from '@koa/cors';
+import Router from '@koa/router';
 import { fileURLToPath } from 'url';
-import * as path from 'path';
+import { join, dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-const app = express();
-const server = createServer(app);
+const app = new Koa();
+const server = createServer(app.callback());
 
 // Socket.IO setup
 const io = new Server(server, {
@@ -41,11 +45,21 @@ if (process.env.REDIS_HOST) {
   }
 }
 
-// Basic API routes (simplified for production)
-app.use(express.json());
+// Middleware
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://wejay.org', 'https://www.wejay.org']
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  credentials: true
+}));
+
+app.use(bodyParser());
+
+// API Router
+const apiRouter = new Router();
 
 // Spotify auth proxy
-app.post('/api/auth/exchange-token', async (req, res) => {
+apiRouter.post('/auth/exchange-token', async (ctx) => {
   try {
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
@@ -55,27 +69,37 @@ app.post('/api/auth/exchange-token', async (req, res) => {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        code: req.body.code,
-        redirect_uri: req.body.redirect_uri
+        code: (ctx.request.body as any).code,
+        redirect_uri: (ctx.request.body as any).redirect_uri
       })
     });
     
     const data = await response.json();
     
     // Set httpOnly cookie
-    res.setHeader('Set-Cookie', `access_token=${data.access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${data.expires_in}`);
+    ctx.cookies.set('access_token', data.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: data.expires_in
+    });
     
-    res.json(data);
+    ctx.body = data;
   } catch (error) {
-    res.status(500).json({ error: 'Token exchange failed' });
+    ctx.status = 500;
+    ctx.body = { error: 'Token exchange failed' };
   }
 });
 
 // Basic room management
-app.get('/api/rooms/:roomId', async (req, res) => {
+apiRouter.get('/rooms/:roomId', async (ctx) => {
   // TODO: Implement room lookup
-  res.json({ id: req.params.roomId, name: `Room ${req.params.roomId}` });
+  ctx.body = { id: ctx.params.roomId, name: `Room ${ctx.params.roomId}` };
 });
+
+app.use(mount('/api', apiRouter.routes()));
+app.use(mount('/api', apiRouter.allowedMethods()));
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -97,11 +121,21 @@ io.on('connection', (socket) => {
 });
 
 // Serve static files
-app.use(express.static(join(__dirname, '../dist')));
+app.use(mount('/', serve(join(__dirname, '../dist'))));
 
-// SPA fallback
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, '../dist/index.html'));
+// SPA fallback - must be last
+app.use(async (ctx) => {
+  if (ctx.path.startsWith('/api')) {
+    ctx.status = 404;
+    ctx.body = { error: 'API endpoint not found' };
+    return;
+  }
+  
+  await serve(join(__dirname, '../dist'))(ctx, async () => {
+    // If file not found, serve index.html for SPA
+    ctx.type = 'html';
+    ctx.body = await require('fs').promises.readFile(join(__dirname, '../dist/index.html'));
+  });
 });
 
 const PORT = parseInt(process.env.PORT || '8080');

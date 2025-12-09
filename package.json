@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc src/server.ts --outDir dist --module commonjs --target es2022 --moduleResolution node --skipLibCheck --esModuleInterop",
+    "build": "vite build && tsc src/server.ts --outDir dist --module es2022 --target es2022 --moduleResolution node --skipLibCheck --esModuleInterop --allowSyntheticDefaultImports",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

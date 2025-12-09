@@ -10,6 +10,7 @@ import cors from '@koa/cors';
 import Router from '@koa/router';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
+import { readFile } from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,8 +70,8 @@ apiRouter.post('/auth/exchange-token', async (ctx) => {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        code: (ctx.request.body as any).code,
-        redirect_uri: (ctx.request.body as any).redirect_uri
+        code: (ctx.request.body as { code: string }).code,
+        redirect_uri: (ctx.request.body as { redirect_uri: string }).redirect_uri
       })
     });
     
@@ -134,7 +135,7 @@ app.use(async (ctx) => {
   await serve(join(__dirname, '../dist'))(ctx, async () => {
     // If file not found, serve index.html for SPA
     ctx.type = 'html';
-    ctx.body = await require('fs').promises.readFile(join(__dirname, '../dist/index.html'));
+    ctx.body = await readFile(join(__dirname, '../dist/index.html'));
   });
 });
 

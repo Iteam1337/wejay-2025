@@ -1,125 +1,91 @@
-# Wejay
+# WEJAY
 
-A democratic Spotify jukebox where everyone gets to contribute songs. Track order is determined by the D'Hondt method for fair distribution.
+En demokratisk Spotify-jukebox där alla får bidra med låtar. Låtordningen bestäms av D'Hondt-metoden för rättvis fördelning.
 
-## Features
+## FUNKTIONER
 
-- **Democratic Queue** - Songs are distributed fairly between users using the D'Hondt algorithm
-- **Spotify Integration** - Search and add songs from Spotify's catalog
-- **Real-time Updates** - See what others add to the queue instantly
-- **Room-based** - Create rooms and invite colleagues or friends
-- **Fair Play Algorithm** - Prevents any single user from dominating the playlist
+- **Demokratisk kö** - Låtar fördelas rättvist mellan användare med D'Hondt-algoritmen
+- **Spotify-integration** - Sök och lägg till låtar från Spotify
+- **Realtidsuppdateringar** - Se vad andra lägger till i kön
+- **Rumsbaserat** - Skapa rum och bjud in kollegor
 
-## Tech Stack
+## TEKNISK STACK
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
-- **UI Components:** Shadcn/ui with custom design system
-- **Backend:** Express.js with Socket.IO for real-time features
-- **Database:** Redis for session management and caching
-- **Authentication:** OAuth 2.0 with Spotify
-- **Deployment:** Docker + Kubernetes
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS
+- **UI:** Shadcn/ui komponenter med neumorfisk design
+- **Font:** Futura PT (versaler för labels)
+- **Backend:** Kräver Lovable Cloud eller Supabase
 
-## Local Development
+## LOKAL UTVECKLING
 
 ```bash
-# Clone the repository
-git clone https://github.com/Iteam1337/wejay-2025.git
-cd wejay-2025
+# Klona projektet
+git clone <repo-url>
+cd wejay
 
-# Install dependencies
+# Installera dependencies
 npm install
 
-# Create environment file
+# Skapa .env fil
 cp .env.example .env
-# Add your Spotify credentials to .env
+# Lägg till dina Spotify credentials
 
-# Start development server
+# Starta dev server
 npm run dev
 ```
 
-## Environment Variables
+## MILJÖVARIABLER
 
 ```env
-# Spotify OAuth
-VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
-CLIENT_SECRET=your_spotify_client_secret
-
-# Optional: Redis configuration
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Optional: Server configuration
-PORT=8080
-NODE_ENV=development
+CLIENT_ID=din_spotify_client_id
+CLIENT_SECRET=din_spotify_client_secret
 ```
 
-Create an app on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) to get your credentials.
+Skapa en app på [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) för att få credentials.
 
-## Scripts
-
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run build:dev    # Build in development mode
-npm run lint         # Run ESLint
-npm run preview      # Preview production build
-npm run start        # Start production server
-```
-
-## Docker
+## DOCKER
 
 ```bash
-# Build the image
+# Bygg image
 docker build -t wejay .
 
-# Run the container
+# Kör container
 docker run -p 8080:8080 \
-  -e VITE_SPOTIFY_CLIENT_ID=xxx \
+  -e CLIENT_ID=xxx \
   -e CLIENT_SECRET=xxx \
   wejay
 ```
 
-## Kubernetes
+## KUBERNETES
 
-See the `/k8s` directory for deployment configurations:
+Se `/k8s` mappen för deployment-konfiguration:
 - `deployment.yaml` - Kubernetes deployment
 - `service.yaml` - ClusterIP service  
-- `ingress.yaml` - Ingress with TLS via cert-manager
-- `redis.yaml` - Redis cluster configuration
+- `ingress.yaml` - Ingress med TLS via cert-manager
+- `external-dns.yaml` - Automatisk DNS för wejay.org
 
-## Architecture
+## ARKITEKTUR
 
 ```
 ┌─────────────────┐     ┌──────────────────┐
 │   React App     │────▶│  Spotify Web API │
-│   (Vite/TS)     │     │   (OAuth 2.0)    │
 └─────────────────┘     └──────────────────┘
-         │
-         ▼
+        │
+        ▼
 ┌─────────────────┐     ┌──────────────────┐
-│  Express.js     │────▶│      Redis       │
-│  + Socket.IO    │     │  (Sessions/Caching)│
+│ Lovable Cloud / │────▶│    PostgreSQL    │
+│    Supabase     │     │    (Rooms, Users)│
 └─────────────────┘     └──────────────────┘
 ```
 
-## The D'Hondt Method
+## D'HONDT-METODEN
 
-The algorithm ensures fair play in the queue:
+Algoritmen fördelar spelordningen rättvist:
 
-1. Each user gets "votes" based on their number of contributions
-2. Songs are ranked by `votes / (already_played + 1)`
-3. Result: No user can dominate the queue
+1. Varje användare får "röster" baserat på antal bidrag
+2. Låtar rankas efter `röster / (redan_spelade + 1)`
+3. Resultatet: ingen användare dominerar kön
 
-This ensures that even users who contribute fewer songs get fair representation in the playlist.
+## LICENS
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-MIT License - see the [LICENSE](LICENSE) file for details.
+MIT

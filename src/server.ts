@@ -106,18 +106,116 @@ app.use(mount('/api', apiRouter.allowedMethods()));
 io.on('connection', (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
   
-  socket.on('room:join', ({ roomId, userId }) => {
+  // Join a room - isolated communication
+  socket.on('room:join', ({ roomId, userId, userName }) => {
+    if (!roomId || !userId) {
+      socket.emit('error', { message: 'roomId and userId are required' });
+      return;
+    }
+    
     socket.join(roomId);
-    socket.to(roomId).emit('user:joined', { userId });
+    console.log(`👤 User ${userId} (${userName || 'Anonymous'}) joined room ${roomId}`);
+    
+    // Notify only users in this room
+    socket.to(roomId).emit('user:joined', { 
+      userId, 
+      userName, 
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Global notification about room activity (optional)
+    io.emit('room:activity', { 
+      type: 'user_joined',
+      roomId,
+      userId,
+      userCount: io.sockets.adapter.rooms.get(roomId)?.size || 0
+    });
   });
   
+  // Leave a room
   socket.on('room:leave', ({ roomId, userId }) => {
+    if (!roomId || !userId) return;
+    
     socket.leave(roomId);
-    socket.to(roomId).emit('user:left', { userId });
+    console.log(`👤 User ${userId} left room ${roomId}`);
+    
+    // Notify only users in this room
+    socket.to(roomId).emit('user:left', { 
+      userId, 
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Global notification about room activity
+    io.emit('room:activity', { 
+      type: 'user_left',
+      roomId,
+      userId,
+      userCount: io.sockets.adapter.rooms.get(roomId)?.size || 0
+    });
   });
   
+  // Queue management - room specific
+  socket.on('queue:add', ({ roomId, track }) => {
+    if (!roomId || !track) return;
+    
+    // Send only to users in this room
+    io.to(roomId).emit('queue:updated', { 
+      action: 'add',
+      track,
+      addedBy: socket.id,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Track playing - room specific
+  socket.on('track:play', ({ roomId, track }) => {
+    if (!roomId || !track) return;
+    
+    // Send only to users in this room
+    io.to(roomId).emit('track:playing', { 
+      track,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Room creation - global notification
+  socket.on('room:create', ({ roomId, roomName, createdBy }) => {
+    if (!roomId || !roomName) return;
+    
+    console.log(`🏠 New room created: ${roomName} (${roomId})`);
+    
+    // Global notification about new room
+    io.emit('room:created', { 
+      roomId,
+      roomName,
+      createdBy,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`🔌 User disconnected: ${socket.id}`);
+    
+    // Find all rooms this socket was in and notify
+    const rooms = io.sockets.adapter.rooms;
+    for (const [roomId, roomMembers] of rooms.entries()) {
+      if (roomMembers.has(socket.id) && !roomId.startsWith(socket.id)) {
+        socket.to(roomId).emit('user:disconnected', { 
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        
+        io.emit('room:activity', { 
+          type: 'user_disconnected',
+          roomId,
+          socketId: socket.id,
+          userCount: roomMembers.size - 1
+        });
+      }
+    }
   });
 });
 

@@ -1,7 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { spotifyAuthPlugin } from "./vite-plugin-spotify-auth";
 import { roomsApiPlugin } from "./vite-plugin-rooms-api";
 import { queueApiPlugin } from "./vite-plugin-queue-api";
@@ -47,9 +46,8 @@ export default defineConfig(({ mode }) => {
     spotifyAuthPlugin(),
     roomsApiPlugin(),
     queueApiPlugin(),
-    socketIoPlugin(),
-    mode === "development" && componentTagger()
-  ].filter(Boolean),
+    socketIoPlugin()
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

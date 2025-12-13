@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Secrets - NEVER commit these
+k8s/secrets*
+secrets*
+*.secrets.yaml
+*.secrets.yml
+secret*

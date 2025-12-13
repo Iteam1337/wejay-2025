@@ -20,16 +20,24 @@ export function useSpotifyAuth() {
     error: null,
   });
 
-  // Generate random string for PKCE
-  const generateRandomString = (length: number): string => {
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  // Generate cryptographically secure random string for PKCE
+  const generateSecureRandomString = (length: number): string => {
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
     const values = crypto.getRandomValues(new Uint8Array(length));
     return values.reduce((acc, x) => acc + possible[x % possible.length], "");
   };
 
-  // Generate code verifier for PKCE
+  // Generate code verifier for PKCE (128 chars, URL-safe)
   const generateCodeVerifier = (): string => {
-    return generateRandomString(128);
+    return generateSecureRandomString(128);
+  };
+
+  // Generate cryptographically secure state parameter
+  const generateSecureState = (): string => {
+    const timestamp = Date.now().toString(36);
+    const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+    const randomPart = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `${timestamp}_${randomPart}`;
   };
 
   // Generate code challenge from code verifier
@@ -125,8 +133,8 @@ export function useSpotifyAuth() {
       const verifier = generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
 
-      // Generate state parameter for security
-      const state = Math.random().toString(36).substring(2, 15);
+      // Generate cryptographically secure state parameter
+      const state = generateSecureState();
 
       // Store verifier on backend server (not in localStorage!)
       console.log('Storing verifier on backend...');

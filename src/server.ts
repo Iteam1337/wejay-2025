@@ -8,9 +8,14 @@ import serve from 'koa-static';
 import bodyParser from 'koa-bodyparser';
 import cors from '@koa/cors';
 import Router from '@koa/router';
+import rateLimit from 'koa-ratelimit';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 import { readFile } from 'fs/promises';
+import { 
+  spotifyCallbackSchema 
+} from './lib/validation';
+import { securityHeaders } from './lib/security';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -49,19 +54,64 @@ if (process.env.REDIS_HOST) {
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://wejay.org', 'https://www.wejay.org']
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    ? 'https://wejay.org'
+    : 'http://localhost:5173',
   credentials: true
 }));
 
-app.use(bodyParser());
+app.use(securityHeaders);
+
+app.use(bodyParser({
+  enableTypes: ['json', 'form'],
+  jsonLimit: '10kb',
+  formLimit: '10kb',
+}));
+
+// Rate limiting middleware
+app.use(rateLimit({
+  driver: 'memory',
+  db: new Map(),
+  duration: 60000, // 1 minute
+  max: 100, // 100 requests per minute
+  id: (ctx) => ctx.ip,
+  errorMessage: 'Too many requests, please try again later.',
+}));
+
+// Stricter rate limiting for auth endpoints
+const authRateLimit = rateLimit({
+  driver: 'memory',
+  db: new Map(),
+  duration: 900000, // 15 minutes
+  max: 10, // 10 auth attempts per 15 minutes
+  id: (ctx) => ctx.ip,
+  errorMessage: 'Too many authentication attempts, please try again later.',
+});
 
 // API Router
 const apiRouter = new Router();
 
-// Spotify auth proxy
-apiRouter.post('/auth/exchange-token', async (ctx) => {
+// Validation middleware helper
+const validate = (schema: { parse: (data: unknown) => unknown }) => {
+  return async (ctx: Koa.Context, next: Koa.Next) => {
+    try {
+      const validatedData = schema.parse(ctx.request.body);
+      ctx.state.validatedData = validatedData;
+      await next();
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { 
+        error: 'Invalid request data',
+        details: error instanceof Error ? error.message : 'Validation failed'
+      };
+    }
+  };
+};
+
+// Spotify auth proxy with validation and rate limiting
+apiRouter.post('/auth/exchange-token', authRateLimit, validate(spotifyCallbackSchema), async (ctx) => {
   try {
+    const { code, redirect_uri } = ctx.state.validatedData as { code: string; redirect_uri: string };
+    
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -70,8 +120,8 @@ apiRouter.post('/auth/exchange-token', async (ctx) => {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        code: (ctx.request.body as { code: string }).code,
-        redirect_uri: (ctx.request.body as { redirect_uri: string }).redirect_uri
+        code,
+        redirect_uri
       })
     });
     

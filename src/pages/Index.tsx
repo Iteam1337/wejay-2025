@@ -127,7 +127,7 @@ const Index = () => {
         leaveRoom();
       }
     };
-  }, []);
+  }, [currentRoom, user, leaveRoom]);
 
   // Use socket tracks instead of local state
   useEffect(() => {

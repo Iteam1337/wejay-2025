@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, Music, Users, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 const Login = () => {
   const { user, isLoading, login, isAuthenticated, isPremium } = useAuth();

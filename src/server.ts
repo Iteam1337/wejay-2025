@@ -1,17 +1,27 @@
-import express from 'express';
+import Koa from 'koa';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { join } from 'path';
+import mount from 'koa-mount';
+import serve from 'koa-static';
+import bodyParser from 'koa-bodyparser';
+import cors from '@koa/cors';
+import Router from '@koa/router';
+import rateLimit from 'koa-ratelimit';
 import { fileURLToPath } from 'url';
-import * as path from 'path';
+import { join, dirname } from 'path';
+import { readFile } from 'fs/promises';
+import { 
+  spotifyCallbackSchema 
+} from './lib/validation';
+import { securityHeaders } from './lib/security';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-const app = express();
-const server = createServer(app);
+const app = new Koa();
+const server = createServer(app.callback());
 
 // Socket.IO setup
 const io = new Server(server, {
@@ -41,12 +51,67 @@ if (process.env.REDIS_HOST) {
   }
 }
 
-// Basic API routes (simplified for production)
-app.use(express.json());
+// Middleware
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://wejay.org'
+    : 'http://localhost:5173',
+  credentials: true
+}));
 
-// Spotify auth proxy
-app.post('/api/auth/exchange-token', async (req, res) => {
+app.use(securityHeaders);
+
+app.use(bodyParser({
+  enableTypes: ['json', 'form'],
+  jsonLimit: '10kb',
+  formLimit: '10kb',
+}));
+
+// Rate limiting middleware
+app.use(rateLimit({
+  driver: 'memory',
+  db: new Map(),
+  duration: 60000, // 1 minute
+  max: 100, // 100 requests per minute
+  id: (ctx) => ctx.ip,
+  errorMessage: 'Too many requests, please try again later.',
+}));
+
+// Stricter rate limiting for auth endpoints
+const authRateLimit = rateLimit({
+  driver: 'memory',
+  db: new Map(),
+  duration: 900000, // 15 minutes
+  max: 10, // 10 auth attempts per 15 minutes
+  id: (ctx) => ctx.ip,
+  errorMessage: 'Too many authentication attempts, please try again later.',
+});
+
+// API Router
+const apiRouter = new Router();
+
+// Validation middleware helper
+const validate = (schema: { parse: (data: unknown) => unknown }) => {
+  return async (ctx: Koa.Context, next: Koa.Next) => {
+    try {
+      const validatedData = schema.parse(ctx.request.body);
+      ctx.state.validatedData = validatedData;
+      await next();
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { 
+        error: 'Invalid request data',
+        details: error instanceof Error ? error.message : 'Validation failed'
+      };
+    }
+  };
+};
+
+// Spotify auth proxy with validation and rate limiting
+apiRouter.post('/auth/exchange-token', authRateLimit, validate(spotifyCallbackSchema), async (ctx) => {
   try {
+    const { code, redirect_uri } = ctx.state.validatedData as { code: string; redirect_uri: string };
+    
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -55,53 +120,171 @@ app.post('/api/auth/exchange-token', async (req, res) => {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        code: req.body.code,
-        redirect_uri: req.body.redirect_uri
+        code,
+        redirect_uri
       })
     });
     
     const data = await response.json();
     
     // Set httpOnly cookie
-    res.setHeader('Set-Cookie', `access_token=${data.access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${data.expires_in}`);
+    ctx.cookies.set('access_token', data.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: data.expires_in
+    });
     
-    res.json(data);
+    ctx.body = data;
   } catch (error) {
-    res.status(500).json({ error: 'Token exchange failed' });
+    ctx.status = 500;
+    ctx.body = { error: 'Token exchange failed' };
   }
 });
 
 // Basic room management
-app.get('/api/rooms/:roomId', async (req, res) => {
+apiRouter.get('/rooms/:roomId', async (ctx) => {
   // TODO: Implement room lookup
-  res.json({ id: req.params.roomId, name: `Room ${req.params.roomId}` });
+  ctx.body = { id: ctx.params.roomId, name: `Room ${ctx.params.roomId}` };
 });
+
+app.use(mount('/api', apiRouter.routes()));
+app.use(mount('/api', apiRouter.allowedMethods()));
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
   
-  socket.on('room:join', ({ roomId, userId }) => {
+  // Join a room - isolated communication
+  socket.on('room:join', ({ roomId, userId, userName }) => {
+    if (!roomId || !userId) {
+      socket.emit('error', { message: 'roomId and userId are required' });
+      return;
+    }
+    
     socket.join(roomId);
-    socket.to(roomId).emit('user:joined', { userId });
+    console.log(`👤 User ${userId} (${userName || 'Anonymous'}) joined room ${roomId}`);
+    
+    // Notify only users in this room
+    socket.to(roomId).emit('user:joined', { 
+      userId, 
+      userName, 
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Global notification about room activity (optional)
+    io.emit('room:activity', { 
+      type: 'user_joined',
+      roomId,
+      userId,
+      userCount: io.sockets.adapter.rooms.get(roomId)?.size || 0
+    });
   });
   
+  // Leave a room
   socket.on('room:leave', ({ roomId, userId }) => {
+    if (!roomId || !userId) return;
+    
     socket.leave(roomId);
-    socket.to(roomId).emit('user:left', { userId });
+    console.log(`👤 User ${userId} left room ${roomId}`);
+    
+    // Notify only users in this room
+    socket.to(roomId).emit('user:left', { 
+      userId, 
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Global notification about room activity
+    io.emit('room:activity', { 
+      type: 'user_left',
+      roomId,
+      userId,
+      userCount: io.sockets.adapter.rooms.get(roomId)?.size || 0
+    });
   });
   
+  // Queue management - room specific
+  socket.on('queue:add', ({ roomId, track }) => {
+    if (!roomId || !track) return;
+    
+    // Send only to users in this room
+    io.to(roomId).emit('queue:updated', { 
+      action: 'add',
+      track,
+      addedBy: socket.id,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Track playing - room specific
+  socket.on('track:play', ({ roomId, track }) => {
+    if (!roomId || !track) return;
+    
+    // Send only to users in this room
+    io.to(roomId).emit('track:playing', { 
+      track,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Room creation - global notification
+  socket.on('room:create', ({ roomId, roomName, createdBy }) => {
+    if (!roomId || !roomName) return;
+    
+    console.log(`🏠 New room created: ${roomName} (${roomId})`);
+    
+    // Global notification about new room
+    io.emit('room:created', { 
+      roomId,
+      roomName,
+      createdBy,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`🔌 User disconnected: ${socket.id}`);
+    
+    // Find all rooms this socket was in and notify
+    const rooms = io.sockets.adapter.rooms;
+    for (const [roomId, roomMembers] of rooms.entries()) {
+      if (roomMembers.has(socket.id) && !roomId.startsWith(socket.id)) {
+        socket.to(roomId).emit('user:disconnected', { 
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        
+        io.emit('room:activity', { 
+          type: 'user_disconnected',
+          roomId,
+          socketId: socket.id,
+          userCount: roomMembers.size - 1
+        });
+      }
+    }
   });
 });
 
 // Serve static files
-app.use(express.static(join(__dirname, '../dist')));
+app.use(mount('/', serve(join(__dirname, '../dist'))));
 
-// SPA fallback
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, '../dist/index.html'));
+// SPA fallback - must be last
+app.use(async (ctx) => {
+  if (ctx.path.startsWith('/api')) {
+    ctx.status = 404;
+    ctx.body = { error: 'API endpoint not found' };
+    return;
+  }
+  
+  await serve(join(__dirname, '../dist'))(ctx, async () => {
+    // If file not found, serve index.html for SPA
+    ctx.type = 'html';
+    ctx.body = await readFile(join(__dirname, '../dist/index.html'));
+  });
 });
 
 const PORT = parseInt(process.env.PORT || '8080');

@@ -10,7 +10,7 @@ import { AIRecommendations } from "@/components/AIRecommendations";
 import { SpotifyPlaylistSync } from "@/components/SpotifyPlaylistSync";
 import { arrangeTracks } from "@/lib/dhondt";
 import { Track, SearchTrack } from "@/types/wejay";
-import { toast } from "sonner";
+import { toast } from '@/lib/toast';
 import { Heart, Search, Loader2, LogOut } from "lucide-react";
 import { useSpotifySearch } from "@/hooks/useSpotifySearch";
 import { useSpotifyRecommendations } from "@/hooks/useSpotifyRecommendations";
@@ -127,7 +127,7 @@ const Index = () => {
         leaveRoom();
       }
     };
-  }, []);
+  }, [currentRoom, user, leaveRoom]);
 
   // Use socket tracks instead of local state
   useEffect(() => {

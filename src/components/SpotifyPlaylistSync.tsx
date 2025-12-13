@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ExternalLink, Music, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Room } from '@/types/wejay';
 
 interface SpotifyPlaylistSyncProps {
@@ -22,7 +22,7 @@ export function SpotifyPlaylistSync({ playlistUrl, hasTracksInQueue, room }: Spo
     if (playlistUrl && !url) {
       setUrl(playlistUrl);
     }
-  }, [playlistUrl]);
+  }, [playlistUrl, url]);
 
   const handleCreatePlaylist = async () => {
     console.log('[SpotifyPlaylistSync] handleCreatePlaylist called');

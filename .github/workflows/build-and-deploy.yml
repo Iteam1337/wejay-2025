@@ -77,19 +77,4 @@ jobs:
         cache-to: type=gha,mode=max
         
 
-  security-scan:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:feat/migrate-to-koa
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+  

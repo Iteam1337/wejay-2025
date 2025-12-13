@@ -29,7 +29,7 @@ const Index = () => {
     isConnected, 
     currentRoom, 
     tracks: socketTracks,
-    playbackState: socketPlaybackState,
+    
     joinRoom, 
     leaveRoom,
     addTrack: socketAddTrack,
@@ -184,11 +184,7 @@ const Index = () => {
     }
   }, [arrangedPlaylist, isConnected, currentRoom, trackEnded]);
 
-  const handleSkip = useCallback(() => {
-    if (arrangedPlaylist.length > 0) {
-      handleTrackEnd();
-    }
-  }, [handleTrackEnd, arrangedPlaylist]);
+  
 
   // handlePlayPause is now handled by SpotifyPlayer component
 

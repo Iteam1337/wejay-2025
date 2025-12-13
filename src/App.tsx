@@ -5,11 +5,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Rooms from "./pages/Rooms";
-import Callback from "./pages/Callback";
-import NotFound from "./pages/NotFound";
+import { Suspense, lazy } from "react";
+
+// Lazy load pages for better performance
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const Rooms = lazy(() => import("./pages/Rooms"));
+const Callback = lazy(() => import("./pages/Callback"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 

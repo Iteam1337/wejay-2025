@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { searchSpotify, SpotifyTrack } from "@/lib/spotify";
 
 export function useSpotifySearch(query: string, enabled: boolean = true) {

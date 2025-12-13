@@ -5,8 +5,9 @@
   "description": "A democratic Spotify jukebox where everyone gets to contribute songs. Track order is determined by the D'Hondt method for fair distribution.",
   "type": "module",
   "scripts": {
+    "start": "node --import tsx src/server.ts",  
     "dev": "vite",
-    "build": "vite build && tsc src/server.ts --outDir dist --module es2022 --target es2022 --moduleResolution node --skipLibCheck --esModuleInterop --allowSyntheticDefaultImports",
+    "build": "vite build && tsc --project tsconfig.app.json --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "echo \"No tests specified\" && exit 0"

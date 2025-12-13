@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Suspense, lazy } from "react";
+import { lazy, Suspense } from "react";
+
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -24,15 +25,17 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Login />} />
-              <Route path="/rooms" element={<Rooms />} />
-              <Route path="/callback" element={<Callback />} />
-              <Route path="/app" element={<Index />} />
-              <Route path="/room/:roomId" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<div>Loading...</div>}>
+              <Routes>
+                <Route path="/" element={<Login />} />
+                <Route path="/rooms" element={<Rooms />} />
+                <Route path="/callback" element={<Callback />} />
+                <Route path="/app" element={<Index />} />
+                <Route path="/room/:roomId" element={<Index />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

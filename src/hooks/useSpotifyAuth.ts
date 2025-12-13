@@ -50,11 +50,6 @@ export function useSpotifyAuth() {
       .replace(/=+$/, '');
   };
 
-  // Check for existing auth on mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
   const checkAuthStatus = useCallback(async () => {
     try {
       // Get token from httpOnly cookie via backend
@@ -127,6 +122,11 @@ export function useSpotifyAuth() {
       }));
     }
   }, []);
+
+  // Check for existing auth on mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   const login = useCallback(async () => {
     try {
@@ -255,7 +255,7 @@ export function useSpotifyAuth() {
         error: error instanceof Error ? error.message : 'Failed to complete authentication',
       }));
     }
-  }, [REDIRECT_URI]);
+  }, []);
 
   const logout = useCallback(async () => {
     // Clear cookies on server

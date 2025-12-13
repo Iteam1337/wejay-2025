@@ -52,7 +52,7 @@ export const mockSearchResults: Track[] = [
     duration: 194,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:2FxmhksIbx3ea33S43A0D5",
   },
   {
     id: "track-3",
@@ -63,7 +63,7 @@ export const mockSearchResults: Track[] = [
     duration: 233,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:7qiZfU4dY1Kw1owLsZvIzS",
   },
   {
     id: "track-4",
@@ -74,7 +74,7 @@ export const mockSearchResults: Track[] = [
     duration: 209,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:1W6XKfQhNulGfsmlGpZOXb",
   },
   {
     id: "track-5",
@@ -85,7 +85,7 @@ export const mockSearchResults: Track[] = [
     duration: 174,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:6UelLqjlWMvsIVP0YcZSPc",
   },
   {
     id: "track-6",
@@ -96,7 +96,7 @@ export const mockSearchResults: Track[] = [
     duration: 203,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:5y2XqVxcqW8Gdil9KbdJXt",
   },
 ];
 
@@ -110,7 +110,7 @@ export const mockFavorites: Track[] = [
     duration: 354,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:4cOdK2wGLETOMsVvXh5gSd",
   },
   {
     id: "fav-2",
@@ -121,7 +121,7 @@ export const mockFavorites: Track[] = [
     duration: 390,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:40riOy7x9W7GXjyGp4pjAv",
   },
   {
     id: "fav-3",
@@ -132,7 +132,7 @@ export const mockFavorites: Track[] = [
     duration: 482,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:5CQ30WqJwPSw3PlHxlgVjM",
   },
   {
     id: "fav-4",
@@ -143,7 +143,7 @@ export const mockFavorites: Track[] = [
     duration: 187,
     addedBy: "",
     addedAt: new Date(),
-    spotifyId: `spotify:track:${Math.random().toString(36).substr(2, 22)}`,
+    spotifyId: "spotify:track:73vAVHHpwXecj4cPTuRJ2x",
   },
 ];
 

@@ -5,9 +5,9 @@
   "description": "A democratic Spotify jukebox where everyone gets to contribute songs. Track order is determined by the D'Hondt method for fair distribution.",
   "type": "module",
   "scripts": {
-    "start": "node --import tsx src/server.ts",  
+    "start": "node --import tsx src/server.ts",
     "dev": "vite",
-    "build": "vite build && tsc --project tsconfig.app.json --noEmit",
+    "build": "vite build && tsc --project tsconfig.app.json",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "echo \"No tests specified\" && exit 0"
@@ -78,6 +78,7 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.21.0",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
   },

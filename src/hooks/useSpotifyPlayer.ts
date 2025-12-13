@@ -1,6 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface WebPlaybackError {
+  message: string;
+}
+
+interface WebPlaybackReady {
+  device_id: string;
+}
+
+interface WebPlaybackNotReady {
+  device_id: string;
+}
+
 interface SpotifyPlayer {
   connect: () => Promise<boolean>;
   disconnect: () => void;
@@ -81,28 +93,28 @@ export function useSpotifyPlayer() {
 
       // Error handling
       spotifyPlayer.addListener('initialization_error', (data: unknown) => {
-        const { message } = data as { message: any };
+        const { message } = data as WebPlaybackError;
         console.error('Spotify Player initialization error:', message);
       });
 
       spotifyPlayer.addListener('authentication_error', (data: unknown) => {
-        const { message } = data as { message: any };
+        const { message } = data as WebPlaybackError;
         console.error('Spotify Player authentication error:', message);
       });
 
       spotifyPlayer.addListener('account_error', (data: unknown) => {
-        const { message } = data as { message: any };
+        const { message } = data as WebPlaybackError;
         console.error('Spotify Player account error:', message);
       });
 
       spotifyPlayer.addListener('playback_error', (data: unknown) => {
-        const { message } = data as { message: any };
+        const { message } = data as WebPlaybackError;
         console.error('Spotify Player playback error:', message);
       });
 
       // Ready
       spotifyPlayer.addListener('ready', (data: unknown) => {
-        const { device_id } = data as { device_id: any };
+        const { device_id } = data as WebPlaybackReady;
         console.log('Spotify Player: Ready with device ID', device_id);
         setDeviceId(device_id);
         setIsReady(true);
@@ -110,7 +122,7 @@ export function useSpotifyPlayer() {
 
       // Not Ready
       spotifyPlayer.addListener('not_ready', (data: unknown) => {
-        const { device_id } = data as { device_id: any };
+        const { device_id } = data as WebPlaybackNotReady;
         console.log('Spotify Player: Device has gone offline', device_id);
         setIsReady(false);
       });

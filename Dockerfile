@@ -32,4 +32,4 @@ EXPOSE 8080
 USER wejay
 
 # Use the production server with Socket.IO support
-CMD ["node", "dist/server.js"]
+CMD ["node", "start"]

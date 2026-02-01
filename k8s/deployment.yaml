@@ -33,6 +33,7 @@ spec:
       containers:
         - name: wejay
           image: ghcr.io/iteam1337/wejay-2025:main
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:

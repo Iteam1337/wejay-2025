@@ -5,6 +5,9 @@ import serve from 'koa-static';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { authMiddleware } from './middleware/auth.js';
+import { roomsApiMiddleware } from './middleware/rooms.js';
+import { queueApiMiddleware } from './middleware/queue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,6 +16,11 @@ const app = new Koa();
 
 app.use(cors());
 app.use(bodyParser());
+
+// Register API middlewares
+app.use(authMiddleware());
+app.use(roomsApiMiddleware());
+app.use(queueApiMiddleware());
 
 // Serve static files from dist
 app.use(serve(join(__dirname, '../dist')));

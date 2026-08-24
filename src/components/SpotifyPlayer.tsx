@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause, SkipForward, ExternalLink, Crown, Volume2, ChevronDown, Monitor, Headphones, Volume1 } from "lucide-react";
+import { Play, Pause, SkipForward, ExternalLink, Crown, Volume2, ChevronDown, Monitor, Headphones, Volume1, Music } from "lucide-react";
 import { Track } from "@/types/wejay";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,12 +20,14 @@ interface SpotifyPlayerProps {
   currentTrack: Track | null;
   onTrackEnd: () => void;
   playlistId?: string;
+  playlistUrl?: string;
 }
 
-export function SpotifyPlayer({ 
-  currentTrack, 
+export function SpotifyPlayer({
+  currentTrack,
   onTrackEnd,
   playlistId,
+  playlistUrl,
 }: SpotifyPlayerProps) {
   const { user, isPremium } = useAuth();
   const { playbackState } = useSocket();
@@ -85,12 +87,12 @@ export function SpotifyPlayer({
       // Convert track ID to Spotify URI (use spotifyId if available)
       const spotifyTrackId = currentTrack.spotifyId || currentTrack.id.split('-')[0];
       const spotifyUri = `spotify:track:${spotifyTrackId}`;
-      
+
       // Check if playback state is for THIS track or a different one
       const isCurrentTrackInPlaybackState = playbackState.currentTrackId === currentTrack.id;
-      
+
       let startPosition = 0;
-      
+
       if (isCurrentTrackInPlaybackState) {
         // Same track - calculate elapsed time since track started
         const now = Date.now();
@@ -101,11 +103,18 @@ export function SpotifyPlayer({
         // New track - start from beginning
         console.log('Auto-playing NEW track:', currentTrack.name, 'from beginning');
       }
-      
+
       // Play from calculated position
       play(spotifyUri, startPosition);
     }
   }, [currentTrack?.id, isReady, isPremium, play, playbackState, playbackMode, currentTrack]);
+
+  // Show toast when switching to Spotify mode
+  useEffect(() => {
+    if (playbackMode === 'spotify' && currentTrack) {
+      console.log('Spotify mode - playlistUrl:', playlistUrl);
+    }
+  }, [playbackMode, playlistUrl, currentTrack]);
 
   // Track ended - call onTrackEnd
   useEffect(() => {
@@ -158,6 +167,12 @@ export function SpotifyPlayer({
     }
   };
 
+  const openPlaylistInSpotify = () => {
+    if (playlistUrl) {
+      window.open(playlistUrl, '_blank');
+    }
+  };
+
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
     const mins = Math.floor(seconds / 60);
@@ -203,7 +218,7 @@ export function SpotifyPlayer({
               <Play className="w-4 h-4 text-primary fill-current ml-0.5" />
             )}
           </button>
-          
+
           {/* Dropdown for playback mode */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -225,7 +240,7 @@ export function SpotifyPlayer({
                   <div className="text-xs text-muted-foreground">Play in browser</div>
                 </div>
               </DropdownMenuItem>
-              
+
               <DropdownMenuItem
                 onClick={() => setPlaybackMode('spotify')}
                 className={cn("cursor-pointer", playbackMode === 'spotify' && "bg-accent")}
@@ -236,9 +251,9 @@ export function SpotifyPlayer({
                   <div className="text-xs text-muted-foreground">Control from Spotify app</div>
                 </div>
               </DropdownMenuItem>
-              
+
               <DropdownMenuSeparator />
-              
+
               <DropdownMenuItem
                 onClick={() => setPlaybackMode('silent')}
                 className={cn("cursor-pointer", playbackMode === 'silent' && "bg-accent")}
@@ -252,7 +267,19 @@ export function SpotifyPlayer({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
+
+        {/* Open in Spotify button - only show in Spotify mode */}
+        {playbackMode === 'spotify' && playlistUrl && (
+          <button
+            onClick={openPlaylistInSpotify}
+            className="neumorphic-button px-3 h-10 flex items-center gap-2 flex-shrink-0 text-sm font-medium text-[#1DB954] hover:text-[#1ed760]"
+            title="Open playlist in Spotify to play on Sonos"
+          >
+            <Music className="w-4 h-4" />
+            <span className="hidden sm:inline">Open in Spotify</span>
+          </button>
+        )}
+
         <button
           onClick={handleSkip}
           className="neumorphic-button w-10 h-10 flex items-center justify-center flex-shrink-0"
@@ -266,13 +293,13 @@ export function SpotifyPlayer({
       {/* Track Info & Progress */}
       {currentTrack ? (
         <div className="flex-1 min-w-0 flex items-center gap-3">
-          <button 
+          <button
             onClick={openInSpotify}
             className="relative group flex-shrink-0"
             title="Open in Spotify"
           >
-            <img 
-              src={currentTrack.albumArt} 
+            <img
+              src={currentTrack.albumArt}
               alt={currentTrack.album}
               className="w-10 h-10 rounded object-cover"
             />
@@ -280,7 +307,7 @@ export function SpotifyPlayer({
               <ExternalLink className="w-3 h-3 text-white" />
             </div>
           </button>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 mb-1">
               <p className="text-sm font-medium truncate flex-1">{currentTrack.name}</p>
@@ -289,7 +316,7 @@ export function SpotifyPlayer({
               </span>
             </div>
             <p className="text-xs text-muted-foreground truncate mb-1.5">{currentTrack.artist}</p>
-            
+
             {/* Progress Bar */}
             {isPremium && isReady ? (
               <Slider
@@ -301,14 +328,14 @@ export function SpotifyPlayer({
               />
             ) : (
               <div className="h-1 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary transition-all duration-1000 ease-linear"
                   style={{ width: `${duration > 0 ? (position / duration) * 100 : 0}%` }}
                 />
               </div>
             )}
           </div>
-          
+
           {/* Volume Control */}
           {isPremium && isReady && (
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -333,18 +360,18 @@ export function SpotifyPlayer({
               <span className="text-xs text-muted-foreground">
                 {playbackMode === 'web' && !isReady && isPremium ? 'Connecting to Spotify...' :
                  playbackMode === 'web' ? 'Playing in browser' :
-                 playbackMode === 'spotify' ? 'Control from Spotify app' :
+                 playbackMode === 'spotify' ? (playlistUrl ? 'Open playlist in Spotify to play on Sonos' : 'Control from Spotify app') :
                  'Silent mode'}
               </span>
             </div>
           </div>
-          
+
           {/* Mode indicator badge */}
           <div className="neumorphic px-2 py-1 rounded-full flex items-center gap-1.5">
             {getModeIcon()}
             <span className="text-xs font-medium">{getModeLabel()}</span>
           </div>
-          
+
           {/* Premium Badge */}
           {isPremium && user && (
             <div className="neumorphic px-2 py-1 rounded-full flex items-center gap-1">

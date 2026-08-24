@@ -6,9 +6,13 @@ import serve from 'koa-static';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { Server as SocketIOServer } from 'socket.io';
+import Redis from 'ioredis';
 import { authMiddleware } from './middleware/auth.js';
 import { roomsApiMiddleware } from './middleware/rooms.js';
 import { queueApiMiddleware } from './middleware/queue.js';
+import { setupSocketIO } from './lib/socket-setup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -46,6 +50,42 @@ app.use(async (ctx) => {
 });
 
 const port = process.env.PORT || 8080;
-app.listen(port, () => {
+
+// Create HTTP server from Koa app
+const httpServer = createServer(app.callback());
+
+// Set up Socket.IO
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: true,
+    credentials: true,
+  },
+});
+
+// Set up Redis for Socket.IO
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  retryStrategy: (times) => {
+    if (times > 3) {
+      console.error('[Socket.IO] Redis connection failed after 3 retries');
+      return null;
+    }
+    return Math.min(times * 100, 3000);
+  },
+});
+
+redis.on('connect', () => {
+  console.log('[Socket.IO] Connected to Redis');
+});
+
+redis.on('error', (err) => {
+  console.error('[Socket.IO] Redis error:', err);
+});
+
+setupSocketIO(io, redis);
+
+httpServer.listen(port, () => {
   console.log(`🚀 Koa server running on port ${port}`);
+  console.log(`🔌 Socket.IO listening on same port`);
 });

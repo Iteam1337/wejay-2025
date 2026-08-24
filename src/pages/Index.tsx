@@ -307,6 +307,7 @@ const Index = () => {
               currentTrack={currentTrack}
               onTrackEnd={handleTrackEnd}
               playlistId={currentRoom?.spotifyPlaylistId}
+              playlistUrl={currentRoom?.spotifyPlaylistUrl}
             />
             
             <div className="flex items-center gap-2 flex-shrink-0">

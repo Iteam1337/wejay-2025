@@ -1,160 +1,131 @@
-import Koa from 'koa';
+import Router from '@koa/router';
 import Redis from 'ioredis';
 
-let redis: Redis;
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+});
 
-export function queueApiMiddleware(): Koa.Middleware {
-  // Initialize Redis client
-  redis = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-  });
+interface QueueTrack {
+  id: string;
+  addedBy: string;
+  [key: string]: unknown;
+}
 
-  return async (ctx, next) => {
-    // Get track history for user in room (with weekday/time context)
-    if (ctx.path.match(/^\/api\/rooms\/[^/]+\/history\/[^/]+$/) && ctx.method === 'GET') {
-      try {
-        const urlParts = ctx.path.split('/');
-        const roomId = urlParts[3];
-        const userId = urlParts[5]; // /api/rooms/:roomId/history/:userId
+interface Queue {
+  tracks: QueueTrack[];
+}
 
-        if (!roomId || !userId) {
-          ctx.status = 400;
-          ctx.body = { error: 'Missing roomId or userId' };
-          return;
-        }
+async function getQueue(roomId: string): Promise<Queue> {
+  const data = await redis.get(`room:${roomId}:queue`);
+  return data ? JSON.parse(data) : { tracks: [] };
+}
 
-        // Get history from Redis sorted set
-        const historyKey = `room:${roomId}:user:${userId}:history`;
-        const entries = await redis.zrange(historyKey, 0, -1);
+async function saveQueue(roomId: string, queue: Queue): Promise<void> {
+  await redis.set(`room:${roomId}:queue`, JSON.stringify(queue));
+}
 
-        const history = entries.map(entry => JSON.parse(entry));
+async function getHistory(ctx: Router.RouterContext) {
+  const { roomId, userId } = ctx.params;
 
-        ctx.status = 200;
-        ctx.body = history;
-      } catch (error) {
-        console.error('[Queue API] Get history error:', error);
-        ctx.status = 500;
-        ctx.body = { error: 'Failed to get history' };
-      }
-      return;
-    }
+  const entries = await redis.zrange(`room:${roomId}:user:${userId}:history`, 0, -1);
+  ctx.body = entries.map((entry) => JSON.parse(entry));
+}
 
-    // Get play counts for user in room
-    if (ctx.path.match(/^\/api\/rooms\/[^/]+\/playcounts\/[^/]+$/) && ctx.method === 'GET') {
-      try {
-        const urlParts = ctx.path.split('/');
-        const roomId = urlParts[3];
-        const userId = urlParts[5]; // /api/rooms/:roomId/playcounts/:userId
+async function getPlayCounts(ctx: Router.RouterContext) {
+  const { roomId, userId } = ctx.params;
+  const pattern = `room:${roomId}:user:${userId}:track:*`;
+  const keys = await redis.keys(pattern);
 
-        if (!roomId || !userId) {
-          ctx.status = 400;
-          ctx.body = { error: 'Missing roomId or userId' };
-          return;
-        }
+  const playCounts: Record<string, number> = {};
 
-        // Get all keys for this user's play counts in this room
-        const pattern = `room:${roomId}:user:${userId}:track:*`;
-        const keys = await redis.keys(pattern);
+  for (const key of keys) {
+    const count = await redis.get(key);
+    const trackId = key.split(':').slice(5).join(':');
+    playCounts[trackId] = parseInt(count || '0', 10);
+  }
 
-        const playCounts: Record<string, number> = {};
-        
-        for (const key of keys) {
-          const count = await redis.get(key);
-          // Extract track ID from key: room:roomId:user:userId:track:trackId
-          const trackId = key.split(':').slice(5).join(':');
-          playCounts[trackId] = parseInt(count || '0', 10);
-        }
+  ctx.body = playCounts;
+}
 
-        ctx.status = 200;
-        ctx.body = playCounts;
-      } catch (error) {
-        console.error('[Queue API] Get play counts error:', error);
-        ctx.status = 500;
-        ctx.body = { error: 'Failed to get play counts' };
-      }
-      return;
-    }
+type Direction = 'up' | 'down';
 
-    // Move track up in queue (for own tracks only)
-    if (ctx.path.match(/^\/api\/rooms\/[^/]+\/queue\/move$/) && ctx.method === 'POST') {
-      try {
-        const roomId = ctx.path.split('/')[3];
-        const { trackId, userId, direction } = ctx.request.body as { 
-          trackId: string; 
-          userId: string; 
-          direction: 'up' | 'down' 
-        };
+interface MoveRequest {
+  trackId: string;
+  userId: string;
+  direction: Direction;
+}
 
-        if (!trackId || !userId || !direction) {
-          ctx.status = 400;
-          ctx.body = { error: 'Missing trackId, userId, or direction' };
-          return;
-        }
+function validateMoveRequest(body: MoveRequest): string | null {
+  if (!body.trackId) return 'Missing trackId';
+  if (!body.userId) return 'Missing userId';
+  if (!body.direction) return 'Missing direction';
+  return null;
+}
 
-        // Get current queue from Redis
-        const queueData = await redis.get(`room:${roomId}:queue`);
-        const queue = queueData ? JSON.parse(queueData) : { tracks: [] };
+function calculateNewIndex(currentIndex: number, direction: Direction, queueLength: number): number {
+  if (direction === 'up') {
+    return Math.max(1, currentIndex - 1); // Can't go before currently playing
+  }
+  return Math.min(queueLength - 1, currentIndex + 1);
+}
 
-        // Find the track
-        const trackIndex = queue.tracks.findIndex((t: { id: string }) => t.id === trackId);
-        
-        if (trackIndex === -1) {
-          ctx.status = 404;
-          ctx.body = { error: 'Track not found' };
-          return;
-        }
+async function moveTrack(ctx: Router.RouterContext) {
+  const { roomId } = ctx.params;
+  const body = ctx.request.body as MoveRequest;
 
-        const track = queue.tracks[trackIndex];
+  const validationError = validateMoveRequest(body);
+  if (validationError) {
+    ctx.status = 400;
+    ctx.body = { error: validationError };
+    return;
+  }
 
-        // Verify ownership
-        if (track.addedBy !== userId) {
-          ctx.status = 403;
-          ctx.body = { error: 'Can only move your own tracks' };
-          return;
-        }
+  const queue = await getQueue(roomId);
+  const trackIndex = queue.tracks.findIndex((t) => t.id === body.trackId);
 
-        // Can't move the currently playing track (index 0)
-        if (trackIndex === 0) {
-          ctx.status = 400;
-          ctx.body = { error: 'Cannot move currently playing track' };
-          return;
-        }
+  if (trackIndex === -1) {
+    ctx.status = 404;
+    ctx.body = { error: 'Track not found' };
+    return;
+  }
 
-        // Calculate new position
-        let newIndex = trackIndex;
-        if (direction === 'up') {
-          newIndex = Math.max(1, trackIndex - 1); // Can't go before currently playing
-        } else if (direction === 'down') {
-          newIndex = Math.min(queue.tracks.length - 1, trackIndex + 1);
-        }
+  const track = queue.tracks[trackIndex];
 
-        // If position didn't change, just return current queue
-        if (newIndex === trackIndex) {
-          ctx.status = 200;
-          ctx.body = { tracks: queue.tracks };
-          return;
-        }
+  if (track.addedBy !== body.userId) {
+    ctx.status = 403;
+    ctx.body = { error: 'Can only move your own tracks' };
+    return;
+  }
 
-        // Move the track
-        queue.tracks.splice(trackIndex, 1);
-        queue.tracks.splice(newIndex, 0, track);
+  if (trackIndex === 0) {
+    ctx.status = 400;
+    ctx.body = { error: 'Cannot move currently playing track' };
+    return;
+  }
 
-        // Save to Redis
-        await redis.set(`room:${roomId}:queue`, JSON.stringify(queue));
+  const newIndex = calculateNewIndex(trackIndex, body.direction, queue.tracks.length);
 
-        console.log(`[Queue API] Moved track ${trackId} ${direction} in room ${roomId}`);
+  if (newIndex === trackIndex) {
+    ctx.body = { tracks: queue.tracks };
+    return;
+  }
 
-        ctx.status = 200;
-        ctx.body = { tracks: queue.tracks };
-      } catch (error) {
-        console.error('[Queue API] Move track error:', error);
-        ctx.status = 500;
-        ctx.body = { error: 'Failed to move track' };
-      }
-      return;
-    }
+  queue.tracks.splice(trackIndex, 1);
+  queue.tracks.splice(newIndex, 0, track);
 
-    await next();
-  };
+  await saveQueue(roomId, queue);
+
+  console.log(`[Queue API] Moved track ${body.trackId} ${body.direction} in room ${roomId}`);
+  ctx.body = { tracks: queue.tracks };
+}
+
+export function queueApiMiddleware(): Router.Middleware {
+  const router = new Router({ prefix: '/api/rooms' });
+
+  router.get('/:roomId/history/:userId', getHistory);
+  router.get('/:roomId/playcounts/:userId', getPlayCounts);
+  router.post('/:roomId/queue/move', moveTrack);
+
+  return router.routes();
 }

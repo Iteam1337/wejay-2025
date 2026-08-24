@@ -30,7 +30,7 @@ describe('Auth Middleware', () => {
         get: (name: string) => cookieMap.get(name),
       },
       set: vi.fn(),
-    };
+    } as unknown as import('@koa/router').RouterContext;
   }
 
   describe('POST /api/auth/store-verifier', () => {

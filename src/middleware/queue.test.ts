@@ -44,7 +44,7 @@ describe('Queue API Middleware', () => {
       params: params || {},
       status: 200,
       body: undefined as unknown,
-    };
+    } as unknown as import('@koa/router').RouterContext;
   }
 
   describe('GET /api/rooms/:roomId/history/:userId', () => {
@@ -131,7 +131,7 @@ describe('Queue API Middleware', () => {
       await middleware(ctx, async () => {});
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body.tracks[1].id).toBe('track3');
+      expect((ctx.body as { tracks: Array<{ id: string }> }).tracks[1].id).toBe('track3');
     });
 
     it('moves track down in queue', async () => {
@@ -153,7 +153,7 @@ describe('Queue API Middleware', () => {
       await middleware(ctx, async () => {});
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body.tracks[2].id).toBe('track2');
+      expect((ctx.body as { tracks: Array<{ id: string }> }).tracks[2].id).toBe('track2');
     });
 
     it('returns 400 when trackId is missing', async () => {
@@ -236,8 +236,8 @@ describe('Queue API Middleware', () => {
       await middleware(ctx, async () => {});
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body.tracks[0].id).toBe('track1'); // Still first
-      expect(ctx.body.tracks[1].id).toBe('track2'); // Still second
+      expect((ctx.body as { tracks: Array<{ id: string }> }).tracks[0].id).toBe('track1'); // Still first
+      expect((ctx.body as { tracks: Array<{ id: string }> }).tracks[1].id).toBe('track2'); // Still second
     });
   });
 });

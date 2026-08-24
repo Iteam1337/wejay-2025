@@ -78,8 +78,8 @@ describe('Socket.IO Setup', () => {
     await handlers['room:join']({ roomId: 'test-room', userId: 'user-1' });
 
     expect(mockSocket.join).toHaveBeenCalledWith('test-room');
-    expect(mockSocket.data.roomId).toBe('test-room');
-    expect(mockSocket.data.userId).toBe('user-1');
+    expect((mockSocket.data as { roomId: string }).roomId).toBe('test-room');
+    expect((mockSocket.data as { userId: string }).userId).toBe('user-1');
     expect(mockSocket.emit).toHaveBeenCalledWith('queue:state', expect.objectContaining({ tracks: [] }));
   });
 
@@ -124,8 +124,8 @@ describe('Socket.IO Setup', () => {
 
     setupSocketIO(mockIO as never, mockRedis as never);
 
-    mockSocket.data.roomId = 'test-room';
-    mockSocket.data.userId = 'user-1';
+    (mockSocket.data as { roomId: string }).roomId = 'test-room';
+    (mockSocket.data as { userId: string }).userId = 'user-1';
 
     handlers['disconnect']();
 

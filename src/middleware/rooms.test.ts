@@ -47,9 +47,9 @@ describe('Rooms API Middleware', () => {
       request: { body },
       params: params || {},
       status: 200,
-      body: undefined as unknown,
+      body: undefined as Record<string, unknown> | undefined,
       set: vi.fn(),
-    };
+    } as unknown as import('@koa/router').RouterContext;
   }
 
   describe('GET /api/rooms', () => {
@@ -129,7 +129,7 @@ describe('Rooms API Middleware', () => {
       await middleware(ctx, async () => {});
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body.users).toContain('user2');
+      expect((ctx.body as { users: string[] }).users).toContain('user2');
     });
   });
 
@@ -166,7 +166,7 @@ describe('Rooms API Middleware', () => {
       await middleware(ctx, async () => {});
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body.users).toContain('user2');
+      expect((ctx.body as { users: string[] }).users).toContain('user2');
     });
 
     it('returns 400 when userId is missing', async () => {
@@ -197,8 +197,8 @@ describe('Rooms API Middleware', () => {
       await middleware(ctx, async () => {});
 
       expect(ctx.status).toBe(200);
-      expect(ctx.body.users).not.toContain('user2');
-      expect(ctx.body.isActive).toBe(true);
+      expect((ctx.body as { users: string[] }).users).not.toContain('user2');
+      expect((ctx.body as { isActive: boolean }).isActive).toBe(true);
     });
 
     it('marks room as inactive when last user leaves', async () => {
@@ -209,7 +209,7 @@ describe('Rooms API Middleware', () => {
       const ctx = createMockContext('POST', '/api/rooms/test/leave', { userId: 'user1' }, { id: 'test' });
       await middleware(ctx, async () => {});
 
-      expect(ctx.body.isActive).toBe(false);
+      expect((ctx.body as { isActive: boolean }).isActive).toBe(false);
     });
   });
 

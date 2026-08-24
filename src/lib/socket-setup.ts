@@ -38,7 +38,7 @@ async function getRoomState(redis: Redis, roomId: string) {
   };
 }
 
-async function handleJoinRoom(io: SocketIOServer, socket: Socket, redis: Redis, { roomId, userId }: { roomId: string; userId: string }) {
+async function handleJoinRoom(_io: SocketIOServer, socket: Socket, redis: Redis, { roomId, userId }: { roomId: string; userId: string }) {
   console.log(`[Socket.IO] User ${userId} joining room ${roomId}`);
 
   await socket.join(roomId);

@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "username": "berget-code",
-  "theme": "berget-dark",
   "share": "manual",
   "autoupdate": true,
   "model": "berget/deepseek-r1",

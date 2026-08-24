@@ -5,17 +5,25 @@
   "description": "A democratic Spotify jukebox where everyone gets to contribute songs. Track order is determined by the D'Hondt method for fair distribution.",
   "type": "module",
   "scripts": {
+    "start": "npm run build && npm run build:server && node dist-server/server.js",
+    "build:server": "tsc --project tsconfig.server.json",
     "dev": "vite",
-    "build": "vite build && tsc src/server.ts --outDir dist --module es2022 --target es2022 --moduleResolution node --skipLibCheck --esModuleInterop --allowSyntheticDefaultImports",
+    "build": "vite build && tsc --project tsconfig.app.json",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "k8s:render": "r8s render --entry k8s/r8s.tsx --out k8s/manifest.yaml",
+    "k8s:validate": "r8s validate k8s/r8s.tsx"
   },
   "dependencies": {
     "@fontsource/archivo": "^5.2.8",
     "@hookform/resolvers": "^3.10.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@r8s/core": "^0.1.0",
+    "@r8s/recipes": "^0.1.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -51,6 +59,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.6.0",
     "express": "^5.2.1",
     "http-proxy-middleware": "^3.0.5",
@@ -77,11 +86,13 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.21.0",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@r8s/cli": "^0.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/koa": "^3.0.1",
     "@types/koa__cors": "^5.0.1",
@@ -96,6 +107,7 @@
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -105,6 +117,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^7.2.7"
+    "vite": "^7.2.7",
+    "vitest": "^4.1.11"
   }
 }

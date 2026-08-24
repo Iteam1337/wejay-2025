@@ -1,298 +1,101 @@
+import 'dotenv/config';
 import Koa from 'koa';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { createClient } from 'redis';
-import { createAdapter } from '@socket.io/redis-adapter';
-import mount from 'koa-mount';
-import serve from 'koa-static';
 import bodyParser from 'koa-bodyparser';
 import cors from '@koa/cors';
-import Router from '@koa/router';
-import rateLimit from 'koa-ratelimit';
-import { fileURLToPath } from 'url';
-import { join, dirname } from 'path';
-import { readFile } from 'fs/promises';
-import { 
-  spotifyCallbackSchema 
-} from './lib/validation';
-import { securityHeaders } from './lib/security';
+import serve from 'koa-static';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { Server as SocketIOServer } from 'socket.io';
+import Redis from 'ioredis';
+import { authMiddleware } from './middleware/auth.js';
+import { roomsApiMiddleware } from './middleware/rooms.js';
+import { queueApiMiddleware } from './middleware/queue.js';
+import { setupSocketIO } from './lib/socket-setup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = new Koa();
-const server = createServer(app.callback());
 
-// Socket.IO setup
-const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://wejay.org', 'https://www.wejay.org']
-      : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
+app.use(cors());
+app.use(bodyParser());
 
-// Redis adapter for Socket.IO (if Redis is available)
-if (process.env.REDIS_HOST) {
-  try {
-    const pubClient = createClient({
-      url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
-    });
-    const subClient = pubClient.duplicate();
-    
-    await Promise.all([pubClient.connect(), subClient.connect()]);
-    
-    io.adapter(createAdapter(pubClient, subClient));
-    console.log('✅ Socket.IO Redis adapter connected');
-  } catch (error) {
-    console.warn('⚠️ Redis not available, using memory adapter');
-  }
-}
+// Register API middlewares
+app.use(authMiddleware());
+app.use(roomsApiMiddleware());
+app.use(queueApiMiddleware());
 
-// Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://wejay.org'
-    : 'http://localhost:5173',
-  credentials: true
-}));
+// Serve static files from dist
+app.use(serve(join(__dirname, '../dist')));
 
-app.use(securityHeaders);
-
-app.use(bodyParser({
-  enableTypes: ['json', 'form'],
-  jsonLimit: '10kb',
-  formLimit: '10kb',
-}));
-
-// Rate limiting middleware
-app.use(rateLimit({
-  driver: 'memory',
-  db: new Map(),
-  duration: 60000, // 1 minute
-  max: 100, // 100 requests per minute
-  id: (ctx) => ctx.ip,
-  errorMessage: 'Too many requests, please try again later.',
-}));
-
-// Stricter rate limiting for auth endpoints
-const authRateLimit = rateLimit({
-  driver: 'memory',
-  db: new Map(),
-  duration: 900000, // 15 minutes
-  max: 10, // 10 auth attempts per 15 minutes
-  id: (ctx) => ctx.ip,
-  errorMessage: 'Too many authentication attempts, please try again later.',
-});
-
-// API Router
-const apiRouter = new Router();
-
-// Validation middleware helper
-const validate = (schema: { parse: (data: unknown) => unknown }) => {
-  return async (ctx: Koa.Context, next: Koa.Next) => {
-    try {
-      const validatedData = schema.parse(ctx.request.body);
-      ctx.state.validatedData = validatedData;
-      await next();
-    } catch (error) {
-      ctx.status = 400;
-      ctx.body = { 
-        error: 'Invalid request data',
-        details: error instanceof Error ? error.message : 'Validation failed'
-      };
-    }
-  };
-};
-
-// Spotify auth proxy with validation and rate limiting
-apiRouter.post('/auth/exchange-token', authRateLimit, validate(spotifyCallbackSchema), async (ctx) => {
-  try {
-    const { code, redirect_uri } = ctx.state.validatedData as { code: string; redirect_uri: string };
-    
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${process.env.VITE_SPOTIFY_CLIENT_ID}:${process.env.CLIENT_SECRET}`).toString('base64')}`
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri
-      })
-    });
-    
-    const data = await response.json();
-    
-    // Set httpOnly cookie
-    ctx.cookies.set('access_token', data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: data.expires_in
-    });
-    
-    ctx.body = data;
-  } catch (error) {
-    ctx.status = 500;
-    ctx.body = { error: 'Token exchange failed' };
-  }
-});
-
-// Basic room management
-apiRouter.get('/rooms/:roomId', async (ctx) => {
-  // TODO: Implement room lookup
-  ctx.body = { id: ctx.params.roomId, name: `Room ${ctx.params.roomId}` };
-});
-
-app.use(mount('/api', apiRouter.routes()));
-app.use(mount('/api', apiRouter.allowedMethods()));
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log(`🔌 User connected: ${socket.id}`);
-  
-  // Join a room - isolated communication
-  socket.on('room:join', ({ roomId, userId, userName }) => {
-    if (!roomId || !userId) {
-      socket.emit('error', { message: 'roomId and userId are required' });
-      return;
-    }
-    
-    socket.join(roomId);
-    console.log(`👤 User ${userId} (${userName || 'Anonymous'}) joined room ${roomId}`);
-    
-    // Notify only users in this room
-    socket.to(roomId).emit('user:joined', { 
-      userId, 
-      userName, 
-      socketId: socket.id,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Global notification about room activity (optional)
-    io.emit('room:activity', { 
-      type: 'user_joined',
-      roomId,
-      userId,
-      userCount: io.sockets.adapter.rooms.get(roomId)?.size || 0
-    });
-  });
-  
-  // Leave a room
-  socket.on('room:leave', ({ roomId, userId }) => {
-    if (!roomId || !userId) return;
-    
-    socket.leave(roomId);
-    console.log(`👤 User ${userId} left room ${roomId}`);
-    
-    // Notify only users in this room
-    socket.to(roomId).emit('user:left', { 
-      userId, 
-      socketId: socket.id,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Global notification about room activity
-    io.emit('room:activity', { 
-      type: 'user_left',
-      roomId,
-      userId,
-      userCount: io.sockets.adapter.rooms.get(roomId)?.size || 0
-    });
-  });
-  
-  // Queue management - room specific
-  socket.on('queue:add', ({ roomId, track }) => {
-    if (!roomId || !track) return;
-    
-    // Send only to users in this room
-    io.to(roomId).emit('queue:updated', { 
-      action: 'add',
-      track,
-      addedBy: socket.id,
-      timestamp: new Date().toISOString()
-    });
-  });
-  
-  // Track playing - room specific
-  socket.on('track:play', ({ roomId, track }) => {
-    if (!roomId || !track) return;
-    
-    // Send only to users in this room
-    io.to(roomId).emit('track:playing', { 
-      track,
-      timestamp: new Date().toISOString()
-    });
-  });
-  
-  // Room creation - global notification
-  socket.on('room:create', ({ roomId, roomName, createdBy }) => {
-    if (!roomId || !roomName) return;
-    
-    console.log(`🏠 New room created: ${roomName} (${roomId})`);
-    
-    // Global notification about new room
-    io.emit('room:created', { 
-      roomId,
-      roomName,
-      createdBy,
-      timestamp: new Date().toISOString()
-    });
-  });
-  
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`🔌 User disconnected: ${socket.id}`);
-    
-    // Find all rooms this socket was in and notify
-    const rooms = io.sockets.adapter.rooms;
-    for (const [roomId, roomMembers] of rooms.entries()) {
-      if (roomMembers.has(socket.id) && !roomId.startsWith(socket.id)) {
-        socket.to(roomId).emit('user:disconnected', { 
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-        
-        io.emit('room:activity', { 
-          type: 'user_disconnected',
-          roomId,
-          socketId: socket.id,
-          userCount: roomMembers.size - 1
-        });
-      }
-    }
-  });
-});
-
-// Serve static files
-app.use(mount('/', serve(join(__dirname, '../dist'))));
-
-// SPA fallback - must be last
+// SPA fallback - serve index.html for all non-API routes
 app.use(async (ctx) => {
-  if (ctx.path.startsWith('/api')) {
-    ctx.status = 404;
-    ctx.body = { error: 'API endpoint not found' };
+  // Skip if it's an API route or a static file with extension
+  if (ctx.path.startsWith('/api/') || ctx.path.includes('.')) {
     return;
   }
   
-  await serve(join(__dirname, '../dist'))(ctx, async () => {
-    // If file not found, serve index.html for SPA
-    ctx.type = 'html';
-    ctx.body = await readFile(join(__dirname, '../dist/index.html'));
-  });
+  // For all other routes, serve index.html (SPA routing)
+  try {
+    const indexPath = join(__dirname, '../dist/index.html');
+    const indexContent = readFileSync(indexPath, 'utf8');
+    ctx.type = 'text/html';
+    ctx.body = indexContent;
+  } catch (error) {
+    ctx.status = 404;
+    ctx.body = 'Application not found';
+  }
 });
 
-const PORT = parseInt(process.env.PORT || '8080');
+const port = process.env.PORT || 8080;
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Wejay server running on port ${PORT}`);
-  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 URL: ${process.env.NODE_ENV === 'production' ? 'https://wejay.org' : `http://localhost:${PORT}`}`);
+// Create HTTP server from Koa app
+const httpServer = createServer(app.callback());
+
+// Set up Socket.IO
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: true,
+    credentials: true,
+  },
 });
 
-export default app;
+// Set up Redis for Socket.IO
+const redis = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, {
+      retryStrategy: (times) => {
+        if (times > 3) {
+          console.error('[Socket.IO] Redis connection failed after 3 retries');
+          return null;
+        }
+        return Math.min(times * 100, 3000);
+      },
+    })
+  : new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      retryStrategy: (times) => {
+        if (times > 3) {
+          console.error('[Socket.IO] Redis connection failed after 3 retries');
+          return null;
+        }
+        return Math.min(times * 100, 3000);
+      },
+    });
+
+redis.on('connect', () => {
+  console.log('[Socket.IO] Connected to Redis');
+});
+
+redis.on('error', (err) => {
+  console.error('[Socket.IO] Redis error:', err);
+});
+
+setupSocketIO(io, redis);
+
+httpServer.listen(port, () => {
+  console.log(`🚀 Koa server running on port ${port}`);
+  console.log(`🔌 Socket.IO listening on same port`);
+});

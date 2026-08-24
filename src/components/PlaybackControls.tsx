@@ -36,56 +36,24 @@ export function PlaybackControls({
   onPlayPause,
   onSkip,
 }: PlaybackControlsProps) {
-  const handlePlayPauseClick = () => {
-    if (!isPremium && currentTrack) {
-      window.open(getSpotifyTrackUrl(currentTrack), '_blank');
-      return;
-    }
-    onPlayPause();
-  };
-
-  const openPlaylistInSpotify = () => {
-    if (playlistUrl) {
-      window.open(playlistUrl, '_blank');
-    }
-  };
-
   return (
     <div className="flex items-center gap-2 flex-shrink-0">
       <div className="flex items-stretch neumorphic rounded-lg overflow-hidden">
-        <button
-          onClick={handlePlayPauseClick}
-          className={cn(
-            "w-10 h-10 flex items-center justify-center transition-all",
-            isPlaying && playbackMode === 'web' && "bg-primary/10",
-            playbackMode !== 'web' && "opacity-50 cursor-not-allowed"
-          )}
-          disabled={playbackMode !== 'web' || (!isPremium && !currentTrack)}
-          title={getPlayButtonTitle(playbackMode, isPremium, isReady)}
-        >
-          {isPlaying && playbackMode === 'web' ? (
-            <Pause className="w-4 h-4 text-primary fill-current" />
-          ) : (
-            <Play className="w-4 h-4 text-primary fill-current ml-0.5" />
-          )}
-        </button>
-
+        <PlayPauseButton
+          playbackMode={playbackMode}
+          isPlaying={isPlaying}
+          isPremium={isPremium}
+          isReady={isReady}
+          currentTrack={currentTrack}
+          onPlayPause={onPlayPause}
+        />
         <PlaybackModeDropdown
           playbackMode={playbackMode}
           setPlaybackMode={setPlaybackMode}
         />
       </div>
 
-      {playbackMode === 'spotify' && playlistUrl && (
-        <button
-          onClick={openPlaylistInSpotify}
-          className="neumorphic-button px-3 h-10 flex items-center gap-2 flex-shrink-0 text-sm font-medium text-[#1DB954] hover:text-[#1ed760]"
-          title="Open playlist in Spotify to play on Sonos"
-        >
-          <Music className="w-4 h-4" />
-          <span className="hidden sm:inline">Open in Spotify</span>
-        </button>
-      )}
+      <OpenPlaylistButton playbackMode={playbackMode} playlistUrl={playlistUrl} />
 
       <button
         onClick={onSkip}
@@ -96,6 +64,86 @@ export function PlaybackControls({
         <SkipForward className="w-4 h-4" />
       </button>
     </div>
+  );
+}
+
+interface PlayPauseButtonProps {
+  playbackMode: PlaybackMode;
+  isPlaying: boolean;
+  isPremium: boolean;
+  isReady: boolean;
+  currentTrack: Track | null;
+  onPlayPause: () => void;
+}
+
+function PlayPauseButton(props: PlayPauseButtonProps) {
+  const handleClick = createPlayPauseHandler(props);
+  const buttonState = getPlayPauseButtonState(props);
+
+  return (
+    <button
+      onClick={handleClick}
+      className={buttonState.className}
+      disabled={buttonState.disabled}
+      title={buttonState.title}
+    >
+      {buttonState.icon}
+    </button>
+  );
+}
+
+function createPlayPauseHandler({ isPremium, currentTrack, onPlayPause }: PlayPauseButtonProps) {
+  return () => {
+    if (!isPremium && currentTrack) {
+      window.open(getSpotifyTrackUrl(currentTrack), '_blank');
+      return;
+    }
+    onPlayPause();
+  };
+}
+
+function getPlayPauseButtonState({ playbackMode, isPlaying, isPremium, isReady, currentTrack }: PlayPauseButtonProps) {
+  const isWebMode = playbackMode === 'web';
+  const showPause = isPlaying && isWebMode;
+
+  return {
+    className: cn(
+      "w-10 h-10 flex items-center justify-center transition-all",
+      showPause && "bg-primary/10",
+      !isWebMode && "opacity-50 cursor-not-allowed"
+    ),
+    disabled: !isWebMode || (!isPremium && !currentTrack),
+    title: getPlayButtonTitle(playbackMode, isPremium, isReady),
+    icon: showPause ? (
+      <Pause className="w-4 h-4 text-primary fill-current" />
+    ) : (
+      <Play className="w-4 h-4 text-primary fill-current ml-0.5" />
+    ),
+  };
+}
+
+function OpenPlaylistButton({
+  playbackMode,
+  playlistUrl,
+}: {
+  playbackMode: PlaybackMode;
+  playlistUrl?: string;
+}) {
+  if (playbackMode !== 'spotify' || !playlistUrl) return null;
+
+  const handleClick = () => {
+    window.open(playlistUrl, '_blank');
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="neumorphic-button px-3 h-10 flex items-center gap-2 flex-shrink-0 text-sm font-medium text-[#1DB954] hover:text-[#1ed760]"
+      title="Open playlist in Spotify to play on Sonos"
+    >
+      <Music className="w-4 h-4" />
+      <span className="hidden sm:inline">Open in Spotify</span>
+    </button>
   );
 }
 

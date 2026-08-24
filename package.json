@@ -13,13 +13,17 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "k8s:render": "r8s render --entry k8s/r8s.tsx --out k8s/manifest.yaml",
+    "k8s:validate": "r8s validate k8s/r8s.tsx"
   },
   "dependencies": {
     "@fontsource/archivo": "^5.2.8",
     "@hookform/resolvers": "^3.10.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@r8s/core": "^0.1.0",
+    "@r8s/recipes": "^0.1.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -88,6 +92,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@r8s/cli": "^0.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/koa": "^3.0.1",
     "@types/koa__cors": "^5.0.1",

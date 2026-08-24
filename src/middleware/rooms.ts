@@ -12,17 +12,27 @@ interface Room {
   spotifyPlaylistUrl?: string;
 }
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  retryStrategy: (times) => {
-    if (times > 3) {
-      console.error('[Rooms API] Redis connection failed after 3 retries');
-      return null;
-    }
-    return Math.min(times * 100, 3000);
-  },
-});
+const redis = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, {
+      retryStrategy: (times) => {
+        if (times > 3) {
+          console.error('[Rooms API] Redis connection failed after 3 retries');
+          return null;
+        }
+        return Math.min(times * 100, 3000);
+      },
+    })
+  : new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      retryStrategy: (times) => {
+        if (times > 3) {
+          console.error('[Rooms API] Redis connection failed after 3 retries');
+          return null;
+        }
+        return Math.min(times * 100, 3000);
+      },
+    });
 
 redis.on('connect', () => console.log('[Rooms API] Connected to Redis'));
 redis.on('error', (err) => console.error('[Rooms API] Redis error:', err));

@@ -19,23 +19,49 @@ import { useMusicSearch } from "@/hooks/useMusicSearch";
 
 type Tab = "search" | "favorites";
 
-const Index = () => {
+function useIndexPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { currentRoom, isConnected, handleLeaveRoom } = useRoomManager();
+  const playlist = usePlaylist(currentRoom?.id);
+  const musicSearch = useMusicSearch(playlist.myTracks, playlist.myTracksHistory);
+
+  const roomUsers = currentRoom?.users || (user ? [user] : []);
+
+  const handleLogout = useCallback(() => {
+    handleLeaveRoom();
+    logout();
+    navigate("/");
+  }, [handleLeaveRoom, logout, navigate]);
+
+  return {
+    user,
+    currentRoom,
+    isConnected,
+    handleLeaveRoom,
+    roomUsers,
+    handleLogout,
+    ...playlist,
+    ...musicSearch,
+  };
+}
+
+const Index = () => {
   const {
+    user,
+    currentRoom,
+    isConnected,
+    handleLeaveRoom,
+    roomUsers,
+    handleLogout,
     playlistTracks,
     arrangedPlaylist,
     currentTrack,
     myTracks,
-    myTracksHistory,
     addedTrackIds,
     handleTrackEnd,
     handleAddTrack,
     handleMoveTrack,
-  } = usePlaylist(currentRoom?.id);
-
-  const {
     activeTab,
     setActiveTab,
     searchQuery,
@@ -50,15 +76,7 @@ const Index = () => {
     isLoadingRecommendations,
     recommendationsError,
     refreshRecommendations,
-  } = useMusicSearch(myTracks, myTracksHistory);
-
-  const roomUsers = currentRoom?.users || (user ? [user] : []);
-
-  const handleLogout = useCallback(() => {
-    handleLeaveRoom();
-    logout();
-    navigate("/");
-  }, [handleLeaveRoom, logout, navigate]);
+  } = useIndexPage();
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,29 +163,16 @@ function Header({
 }: HeaderProps) {
   const navigate = useNavigate();
 
+  const handleLogoClick = () => {
+    onLeaveRoom();
+    navigate("/rooms");
+  };
+
   return (
     <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="container py-3">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <button
-                onClick={() => {
-                  onLeaveRoom();
-                  navigate("/rooms");
-                }}
-                className="text-lg font-bold uppercase hover:text-primary transition-colors cursor-pointer"
-              >
-                Wejay
-              </button>
-              {currentRoom && (
-                <p className="text-xs text-muted-foreground">
-                  {currentRoom.name} • {roomUsers.length} user{roomUsers.length !== 1 ? "s" : ""}
-                </p>
-              )}
-            </div>
-            {isConnected && <div className="w-2 h-2 bg-green-500 rounded-full" />}
-          </div>
+          <RoomInfo room={currentRoom} userCount={roomUsers.length} isConnected={isConnected} onLogoClick={handleLogoClick} />
 
           <SpotifyPlayer
             currentTrack={currentTrack}
@@ -176,28 +181,73 @@ function Header({
             playlistUrl={currentRoom?.spotifyPlaylistUrl}
           />
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs text-muted-foreground hidden sm:block uppercase">
-              {myTracksCount} {myTracksCount === 1 ? "TRACK" : "TRACKS"}
-            </span>
-            <div className="neumorphic w-8 h-8 rounded-full overflow-hidden">
-              <img
-                src={user?.images[0]?.url || "/placeholder.svg"}
-                alt={user?.display_name || "You"}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <button
-              onClick={onLogout}
-              className="neumorphic p-2 rounded-lg hover:bg-accent transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          <UserControls myTracksCount={myTracksCount} user={user} onLogout={onLogout} />
         </div>
       </div>
     </header>
+  );
+}
+
+function RoomInfo({
+  room,
+  userCount,
+  isConnected,
+  onLogoClick,
+}: {
+  room: Room | null;
+  userCount: number;
+  isConnected: boolean;
+  onLogoClick: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div>
+        <button
+          onClick={onLogoClick}
+          className="text-lg font-bold uppercase hover:text-primary transition-colors cursor-pointer"
+        >
+          Wejay
+        </button>
+        {room && (
+          <p className="text-xs text-muted-foreground">
+            {room.name} • {userCount} user{userCount !== 1 ? "s" : ""}
+          </p>
+        )}
+      </div>
+      {isConnected && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+    </div>
+  );
+}
+
+function UserControls({
+  myTracksCount,
+  user,
+  onLogout,
+}: {
+  myTracksCount: number;
+  user: SpotifyUser | null;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 flex-shrink-0">
+      <span className="text-xs text-muted-foreground hidden sm:block uppercase">
+        {myTracksCount} {myTracksCount === 1 ? "TRACK" : "TRACKS"}
+      </span>
+      <div className="neumorphic w-8 h-8 rounded-full overflow-hidden">
+        <img
+          src={user?.images[0]?.url || "/placeholder.svg"}
+          alt={user?.display_name || "You"}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <button
+        onClick={onLogout}
+        className="neumorphic p-2 rounded-lg hover:bg-accent transition-colors"
+        title="Logout"
+      >
+        <LogOut className="w-4 h-4" />
+      </button>
+    </div>
   );
 }
 

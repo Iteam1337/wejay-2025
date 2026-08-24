@@ -5,59 +5,96 @@ import { toast } from "@/lib/toast";
 import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function usePlaylist(currentRoomId: string | undefined) {
-  const { user } = useAuth();
-  const { tracks: socketTracks, addTrack: socketAddTrack, trackEnded, moveTrack: socketMoveTrack, isConnected } = useSocket();
+function createTrack(track: SearchTrack, userId: string): Track {
+  return {
+    ...track,
+    id: `${track.id}-${Date.now()}`,
+    spotifyId: track.id,
+    addedBy: userId,
+    addedAt: new Date(),
+  };
+}
+
+function usePlaylistState() {
   const [playlistTracks, setPlaylistTracks] = useState<Track[]>([]);
   const [addedTrackIds, setAddedTrackIds] = useState<Set<string>>(new Set());
   const [myTracksHistory, setMyTracksHistory] = useState<Track[]>([]);
 
-  const currentUserId = user?.id || "user-1";
+  const addTrackToState = useCallback((newTrack: Track) => {
+    setPlaylistTracks((prev) => [...prev, newTrack]);
+    setAddedTrackIds((prev) => new Set([...prev, newTrack.spotifyId]));
+  }, []);
 
-  useEffect(() => {
-    setPlaylistTracks(socketTracks);
-  }, [socketTracks]);
+  const addToHistory = useCallback((newTrack: Track) => {
+    setMyTracksHistory((prev) => {
+      const originalId = newTrack.spotifyId;
+      const filtered = prev.filter((t) => t.id.split("-")[0] !== originalId);
+      return [...filtered, newTrack].slice(-20);
+    });
+  }, []);
 
-  const arrangedPlaylist = useMemo(() => arrangeTracks(playlistTracks), [playlistTracks]);
-  const currentTrack = arrangedPlaylist[0] || null;
+  const removeTrackFromState = useCallback((trackId: string) => {
+    setPlaylistTracks((prev) => prev.filter((t) => t.id !== trackId));
+  }, []);
 
-  const myTracks = useMemo(
-    () => arrangedPlaylist.filter((t) => t.addedBy === currentUserId),
-    [arrangedPlaylist, currentUserId]
-  );
+  return {
+    playlistTracks,
+    setPlaylistTracks,
+    addedTrackIds,
+    myTracksHistory,
+    addTrackToState,
+    addToHistory,
+    removeTrackFromState,
+  };
+}
 
+interface PlaylistActionsProps {
+  currentUserId: string;
+  currentRoomId: string | undefined;
+  isConnected: boolean;
+  socketAddTrack: (track: Track) => void;
+  socketMoveTrack: (trackId: string, userId: string, direction: "up" | "down") => void;
+  trackEnded: () => void;
+  addTrackToState: (track: Track) => void;
+  addToHistory: (track: Track) => void;
+  removeTrackFromState: (trackId: string) => void;
+  user: ReturnType<typeof useAuth>["user"];
+  arrangedPlaylist: Track[];
+}
+
+function usePlaylistActions({
+  currentUserId,
+  currentRoomId,
+  isConnected,
+  socketAddTrack,
+  socketMoveTrack,
+  trackEnded,
+  addTrackToState,
+  addToHistory,
+  removeTrackFromState,
+  user,
+  arrangedPlaylist,
+}: PlaylistActionsProps) {
   const handleTrackEnd = useCallback(() => {
     if (arrangedPlaylist.length === 0) return;
 
     if (isConnected && currentRoomId) {
       trackEnded();
     } else {
-      setPlaylistTracks((prev) => prev.filter((t) => t.id !== arrangedPlaylist[0]?.id));
+      removeTrackFromState(arrangedPlaylist[0].id);
     }
 
     toast.success("NEXT TRACK", {
       description: arrangedPlaylist[1]?.name || "Queue is empty",
     });
-  }, [arrangedPlaylist, isConnected, currentRoomId, trackEnded]);
+  }, [arrangedPlaylist, isConnected, currentRoomId, trackEnded, removeTrackFromState]);
 
   const handleAddTrack = useCallback(
     (track: SearchTrack) => {
-      const newTrack: Track = {
-        ...track,
-        id: `${track.id}-${Date.now()}`,
-        spotifyId: track.id,
-        addedBy: currentUserId,
-        addedAt: new Date(),
-      };
+      const newTrack = createTrack(track, currentUserId);
 
-      setPlaylistTracks((prev) => [...prev, newTrack]);
-      setAddedTrackIds((prev) => new Set([...prev, track.id]));
-
-      setMyTracksHistory((prev) => {
-        const originalId = track.id;
-        const filtered = prev.filter((t) => t.id.split("-")[0] !== originalId);
-        return [...filtered, newTrack].slice(-20);
-      });
+      addTrackToState(newTrack);
+      addToHistory(newTrack);
 
       if (isConnected && currentRoomId) {
         socketAddTrack(newTrack);
@@ -67,7 +104,7 @@ export function usePlaylist(currentRoomId: string | undefined) {
         description: currentRoomId ? "Added to room queue" : "Track arranged using D'Hondt method",
       });
     },
-    [currentUserId, isConnected, currentRoomId, socketAddTrack]
+    [currentUserId, isConnected, currentRoomId, socketAddTrack, addTrackToState, addToHistory]
   );
 
   const handleMoveTrack = useCallback(
@@ -78,6 +115,50 @@ export function usePlaylist(currentRoomId: string | undefined) {
     },
     [currentRoomId, user, socketMoveTrack]
   );
+
+  return { handleTrackEnd, handleAddTrack, handleMoveTrack };
+}
+
+export function usePlaylist(currentRoomId: string | undefined) {
+  const { user } = useAuth();
+  const { tracks: socketTracks, addTrack: socketAddTrack, trackEnded, moveTrack: socketMoveTrack, isConnected } = useSocket();
+  const {
+    playlistTracks,
+    setPlaylistTracks,
+    addedTrackIds,
+    myTracksHistory,
+    addTrackToState,
+    addToHistory,
+    removeTrackFromState,
+  } = usePlaylistState();
+
+  const currentUserId = user?.id || "user-1";
+
+  useEffect(() => {
+    setPlaylistTracks(socketTracks);
+  }, [socketTracks, setPlaylistTracks]);
+
+  const arrangedPlaylist = useMemo(() => arrangeTracks(playlistTracks), [playlistTracks]);
+  const currentTrack = arrangedPlaylist[0] || null;
+
+  const myTracks = useMemo(
+    () => arrangedPlaylist.filter((t) => t.addedBy === currentUserId),
+    [arrangedPlaylist, currentUserId]
+  );
+
+  const { handleTrackEnd, handleAddTrack, handleMoveTrack } = usePlaylistActions({
+    currentUserId,
+    currentRoomId,
+    isConnected,
+    socketAddTrack,
+    socketMoveTrack,
+    trackEnded,
+    addTrackToState,
+    addToHistory,
+    removeTrackFromState,
+    user,
+    arrangedPlaylist,
+  });
 
   return {
     playlistTracks,

@@ -32,6 +32,18 @@ jobs:
     - name: Build application
       run: npm run build
 
+    - name: Render K8s manifests
+      run: npm run k8s:render
+
+    - name: Validate K8s manifests
+      run: npm run k8s:validate
+
+    - name: Check if manifests changed
+      run: |
+        if git diff --name-only | grep -q "k8s/manifest.yaml"; then
+          echo "::warning::k8s/manifest.yaml is out of date. Run 'npm run k8s:render' and commit."
+        fi
+
   build-and-push:
     needs: test
     runs-on: ubuntu-latest

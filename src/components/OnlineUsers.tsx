@@ -1,13 +1,10 @@
-import { SpotifyUser } from "@/types/wejay";
+import { useRoom } from "@/contexts/RoomContext";
 import { Users } from "lucide-react";
 
-interface OnlineUsersProps {
-  users: SpotifyUser[];
-  currentUserId: string;
-}
+export function OnlineUsers() {
+  const { roomUsers, currentUserId } = useRoom();
 
-export function OnlineUsers({ users, currentUserId }: OnlineUsersProps) {
-  if (users.length === 0) {
+  if (roomUsers.length === 0) {
     return (
       <div className="neumorphic p-4">
         <div className="flex items-center gap-2 mb-3 uppercase">
@@ -28,22 +25,22 @@ export function OnlineUsers({ users, currentUserId }: OnlineUsersProps) {
       <div className="flex items-center gap-2 mb-3 uppercase">
         <Users className="w-4 h-4 text-primary" />
         <h3 className="font-medium text-sm">
-          ONLINE ({users.length})
+          ONLINE ({roomUsers.length})
         </h3>
       </div>
       <div className="space-y-2">
-        {users.map(user => (
-          <div 
+        {roomUsers.map(user => (
+          <div
             key={user.id}
             className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-              user.id === currentUserId 
-                ? 'bg-primary/10 border border-primary/20' 
+              user.id === currentUserId
+                ? 'bg-primary/10 border border-primary/20'
                 : 'hover:bg-accent/50'
             }`}
           >
             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-muted">
-              <img 
-                src={user.images[0]?.url || "/placeholder.svg"} 
+              <img
+                src={user.images[0]?.url || "/placeholder.svg"}
                 alt={user.display_name}
                 className="w-full h-full object-cover"
               />

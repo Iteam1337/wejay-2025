@@ -3,41 +3,42 @@ kind: Namespace
 metadata:
   name: wejay
 ---
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultStaticSecret
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: wejay-vite-spotify-client-id-vault
+  name: vault-client
+  namespace: wejay
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: vault-auth
   namespace: wejay
 spec:
-  vaultAuthRef: default
-  type: kv-v2
-  destination:
-    create: true
-    name: wejay-vite-spotify-client-id-vault
+  vaultConnectionRef: vault-secrets-operator-system/default
+  method: kubernetes
+  mount: kubernetes-berget-dmz
+  kubernetes:
+    role: wejay
+    serviceAccount: vault-client
 ---
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
-  name: wejay-client-secret-vault
+  name: wejay-secret
   namespace: wejay
 spec:
-  vaultAuthRef: default
+  vaultAuthRef: vault-auth
+  mount: secret
   type: kv-v2
+  path: wejay/app
+  refreshAfter: 60s
   destination:
     create: true
-    name: wejay-client-secret-vault
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultStaticSecret
-metadata:
-  name: wejay-berget-api-key-vault
-  namespace: wejay
-spec:
-  vaultAuthRef: default
-  type: kv-v2
-  destination:
-    create: true
-    name: wejay-berget-api-key-vault
+    name: wejay-secret
+  rolloutRestartTargets:
+    - kind: Deployment
+      name: wejay
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -65,23 +66,20 @@ spec:
             - name: NODE_ENV
               value: production
             - name: VITE_SPOTIFY_REDIRECT_URI
-              value: https://wejay.org/callback
+              value: https://wejay.dmz.berget.ai/callback
             - name: REDIS_URL
               value: redis://wejay-cache.wejay.svc.cluster.local:6379
             - name: VITE_SPOTIFY_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: wejay-vite-spotify-client-id-vault
                   key: spotify-client-id
             - name: CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: wejay-client-secret-vault
                   key: spotify-client-secret
             - name: BERGET_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: wejay-berget-api-key-vault
                   key: berget-api-key
           resources:
             requests:
@@ -123,12 +121,12 @@ metadata:
   namespace: wejay
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    external-dns.alpha.kubernetes.io/hostname: wejay.org
+    external-dns.alpha.kubernetes.io/hostname: wejay.dmz.berget.ai
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   rules:
-    - host: wejay.org
+    - host: wejay.dmz.berget.ai
       http:
         paths:
           - path: /
@@ -140,8 +138,8 @@ spec:
                   number: 80
   tls:
     - hosts:
-        - wejay.org
-      secretName: wejay-prod-tls
+        - wejay.dmz.berget.ai
+      secretName: wejay-tls
 ---
 apiVersion: redis.redis.opstreelabs.in/v1beta2
 kind: RedisCluster

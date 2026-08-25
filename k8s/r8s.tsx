@@ -78,13 +78,13 @@ export default (
     <App
       name="wejay"
       image={image}
-      host="wejay.org"
+      host="wejay.dmz.berget.ai"
       port={8080}
       replicas={2}
       cache={true}
       env={{
         NODE_ENV: 'production',
-        VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.org/callback',
+        VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.dmz.berget.ai/callback',
       }}
       secrets={{
         VITE_SPOTIFY_CLIENT_ID: { name: 'wejay-secret', key: 'spotify-client-id' },

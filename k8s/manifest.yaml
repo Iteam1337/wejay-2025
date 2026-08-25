@@ -66,7 +66,7 @@ spec:
             - name: NODE_ENV
               value: production
             - name: VITE_SPOTIFY_REDIRECT_URI
-              value: https://wejay.org/callback
+              value: https://wejay.dmz.berget.ai/callback
             - name: REDIS_URL
               value: redis://wejay-cache.wejay.svc.cluster.local:6379
             - name: VITE_SPOTIFY_CLIENT_ID
@@ -121,12 +121,12 @@ metadata:
   namespace: wejay
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    external-dns.alpha.kubernetes.io/hostname: wejay.org
+    external-dns.alpha.kubernetes.io/hostname: wejay.dmz.berget.ai
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   rules:
-    - host: wejay.org
+    - host: wejay.dmz.berget.ai
       http:
         paths:
           - path: /
@@ -138,7 +138,7 @@ spec:
                   number: 80
   tls:
     - hosts:
-        - wejay.org
+        - wejay.dmz.berget.ai
       secretName: wejay-tls
 ---
 apiVersion: redis.redis.opstreelabs.in/v1beta2

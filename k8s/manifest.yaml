@@ -59,8 +59,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/iteam1337/wejay-2025:1.0.0
-          imagePullPolicy: Always
+          image: ghcr.io/iteam1337/wejay-2025:main
           ports:
             - containerPort: 8080
           env:

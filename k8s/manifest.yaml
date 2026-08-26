@@ -72,14 +72,17 @@ spec:
             - name: VITE_SPOTIFY_CLIENT_ID
               valueFrom:
                 secretKeyRef:
+                  name: wejay-secret
                   key: spotify-client-id
             - name: CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
+                  name: wejay-secret
                   key: spotify-client-secret
             - name: BERGET_API_KEY
               valueFrom:
                 secretKeyRef:
+                  name: wejay-secret
                   key: berget-api-key
           resources:
             requests:

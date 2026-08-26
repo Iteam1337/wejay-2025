@@ -87,9 +87,9 @@ export default (
         VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.dmz.berget.ai/callback',
       }}
       secrets={{
-        VITE_SPOTIFY_CLIENT_ID: { name: 'wejay-secret', key: 'spotify-client-id' },
-        CLIENT_SECRET: { name: 'wejay-secret', key: 'spotify-client-secret' },
-        BERGET_API_KEY: { name: 'wejay-secret', key: 'berget-api-key' },
+        VITE_SPOTIFY_CLIENT_ID: { secret: 'wejay-secret', key: 'spotify-client-id' },
+        CLIENT_SECRET: { secret: 'wejay-secret', key: 'spotify-client-secret' },
+        BERGET_API_KEY: { secret: 'wejay-secret', key: 'berget-api-key' },
       }}
       resources={{
         requests: { cpu: '100m', memory: '128Mi' },

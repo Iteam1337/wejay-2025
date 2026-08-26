@@ -40,6 +40,25 @@ spec:
     - kind: Deployment
       name: wejay
 ---
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisCluster
+metadata:
+  name: wejay-cache
+  namespace: wejay
+spec:
+  clusterSize: 3
+  persistenceEnabled: false
+  kubernetesConfig:
+    image: redis:7.2-alpine
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,7 +87,7 @@ spec:
             - name: VITE_SPOTIFY_REDIRECT_URI
               value: https://wejay.dmz.berget.ai/callback
             - name: REDIS_URL
-              value: redis://wejay-cache.wejay.svc.cluster.local:6379
+              value: redis://wejay-cache-leader.wejay.svc.cluster.local:6379
             - name: VITE_SPOTIFY_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -143,21 +162,3 @@ spec:
     - hosts:
         - wejay.dmz.berget.ai
       secretName: wejay-tls
----
-apiVersion: redis.redis.opstreelabs.in/v1beta2
-kind: RedisCluster
-metadata:
-  name: wejay-cache
-  namespace: wejay
-spec:
-  clusterSize: 3
-  kubernetesConfig:
-    image: redis:7.2-alpine
-  storage:
-    volumeClaimTemplate:
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 1Gi

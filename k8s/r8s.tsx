@@ -70,18 +70,42 @@ function WejaySecrets() {
   )
 }
 
+// Redis cluster (OT Container Redis operator)
+function RedisCluster() {
+  return (
+    <rediscluster
+      apiVersion="redis.redis.opstreelabs.in/v1beta2"
+      kind="RedisCluster"
+      metadata={{ name: 'wejay-cache', namespace: 'wejay' }}
+      spec={{
+        clusterSize: 3,
+        persistenceEnabled: false,
+        kubernetesConfig: {
+          image: 'redis:7.2-alpine',
+          imagePullPolicy: 'IfNotPresent',
+          resources: {
+            requests: { cpu: '100m', memory: '128Mi' },
+            limits: { cpu: '500m', memory: '512Mi' },
+          },
+        },
+      }}
+    />
+  )
+}
+
 export default (
   <Platform namespace="wejay" routing="ingress">
     <VaultServiceAccount />
     <VaultAuth />
     <WejaySecrets />
+    <RedisCluster />
     <App
       name="wejay"
       image={image}
       host="wejay.dmz.berget.ai"
       port={8080}
       replicas={2}
-      cache={true}
+      cache={false}
       env={{
         NODE_ENV: 'production',
         VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.dmz.berget.ai/callback',

@@ -7,6 +7,7 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+RUN npm run build:server
 
 FROM node:20-alpine
 
@@ -17,8 +18,10 @@ COPY --from=builder /app/package*.json ./
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist-server ./dist-server
 COPY --from=builder /app/vite.config.ts ./
 COPY --from=builder /app/vite-plugin-*.ts ./
+COPY --from=builder /app/tsconfig.server.json ./
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs
@@ -31,5 +34,4 @@ EXPOSE 8080
 
 USER wejay
 
-# Use the production server with Socket.IO support
-CMD ["node", "start"]
+CMD ["node", "dist-server/server.js"]

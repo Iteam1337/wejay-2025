@@ -85,6 +85,7 @@ export default (
       env={{
         NODE_ENV: 'production',
         VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.dmz.berget.ai/callback',
+        REDIS_URL: 'redis://wejay-cache-leader.wejay.svc.cluster.local:6379',
       }}
       secrets={{
         VITE_SPOTIFY_CLIENT_ID: { secret: 'wejay-secret', key: 'spotify-client-id' },

@@ -84,8 +84,6 @@ spec:
           env:
             - name: NODE_ENV
               value: production
-            - name: VITE_SPOTIFY_REDIRECT_URI
-              value: https://wejay.dmz.berget.ai/callback
             - name: REDIS_URL
               value: redis://wejay-cache-leader.wejay.svc.cluster.local:6379
             - name: VITE_SPOTIFY_CLIENT_ID

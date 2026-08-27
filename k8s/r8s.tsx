@@ -109,7 +109,6 @@ export default (
       sharedGateway={{ name: 'dmz-shared-gateway', namespace: 'envoy-gateway-system' }}
       env={{
         NODE_ENV: 'production',
-        VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.dmz.berget.ai/callback',
         REDIS_URL: 'redis://wejay-cache-leader.wejay.svc.cluster.local:6379',
       }}
       secrets={{
@@ -129,3 +128,7 @@ export default (
     />
   </Platform>
 )
+
+// Override: force HTTPRoute to use shared gateway
+// (r8s npm package doesn't have sharedGateway support yet)
+void 0

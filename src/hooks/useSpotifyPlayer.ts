@@ -157,7 +157,15 @@ export function useSpotifyPlayer() {
     if (window.Spotify) {
       initializePlayer();
     } else {
+      // Set callback before loading the script
       window.onSpotifyWebPlaybackSDKReady = initializePlayer;
+      // Dynamically load Spotify SDK if not already loaded
+      if (!document.querySelector('script[src="https://sdk.scdn.co/spotify-player.js"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://sdk.scdn.co/spotify-player.js';
+        script.async = true;
+        document.head.appendChild(script);
+      }
     }
 
     // Cleanup

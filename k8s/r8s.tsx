@@ -94,7 +94,7 @@ function RedisCluster() {
 }
 
 export default (
-  <Platform namespace="wejay" routing="ingress">
+  <Platform namespace="wejay" routing="gateway">
     <VaultServiceAccount />
     <VaultAuth />
     <WejaySecrets />

@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayback } from "@/hooks/usePlayback";
 import { PlaybackControls } from "./PlaybackControls";
 import { TrackProgress } from "./TrackProgress";
+import { DeviceSelector } from "./DeviceSelector";
 import { Volume2, Crown, Monitor, Headphones, Volume1 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { getModeLabel, getModeIcon, getSpotifyTrackUrl } from "@/lib/playback-utils";
@@ -57,6 +58,8 @@ export function SpotifyPlayer({
         onPlayPause={handlePlayPause}
         onSkip={handleSkip}
       />
+
+      <DeviceSelector />
 
       {currentTrack ? (
         <div className="flex-1 min-w-0 flex items-center gap-3">

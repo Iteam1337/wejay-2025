@@ -332,3 +332,112 @@ export async function replacePlaylistTracks(playlistId: string, trackUris: strin
     }
   }
 }
+
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  volume_percent: number | null;
+  is_active: boolean;
+  is_private_session: boolean;
+  is_restricted: boolean;
+  supports_volume: boolean;
+}
+
+export async function getAvailableDevices(): Promise<SpotifyDevice[]> {
+  const token = await getUserAccessToken();
+  if (!token) throw new Error('Not authenticated with Spotify');
+
+  const response = await fetch('https://api.spotify.com/v1/me/player/devices', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      const refreshResponse = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (refreshResponse.ok) return getAvailableDevices();
+      throw new Error('Spotify session expired - please login again');
+    }
+    throw new Error('Failed to fetch devices');
+  }
+
+  const data = await response.json();
+  return data.devices || [];
+}
+
+export async function transferPlayback(deviceId: string, play: boolean = false): Promise<void> {
+  const token = await getUserAccessToken();
+  if (!token) throw new Error('Not authenticated with Spotify');
+
+  const response = await fetch('https://api.spotify.com/v1/me/player', {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      device_ids: [deviceId],
+      play,
+    }),
+  });
+
+  if (!response.ok && response.status !== 204) {
+    if (response.status === 401) {
+      const refreshResponse = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (refreshResponse.ok) return transferPlayback(deviceId, play);
+      throw new Error('Spotify session expired - please login again');
+    }
+    throw new Error('Failed to transfer playback');
+  }
+}
+
+export async function playOnDevice(
+  deviceId: string,
+  trackUri: string,
+  positionMs?: number,
+  playlistUri?: string
+): Promise<void> {
+  const token = await getUserAccessToken();
+  if (!token) throw new Error('Not authenticated with Spotify');
+
+  const body: Record<string, unknown> = {};
+  if (playlistUri) {
+    body.context_uri = playlistUri;
+    body.offset = { uri: trackUri };
+  } else {
+    body.uris = [trackUri];
+  }
+  if (positionMs !== undefined) {
+    body.position_ms = Math.floor(positionMs);
+  }
+
+  const response = await fetch(
+    `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok && response.status !== 204) {
+    if (response.status === 401) {
+      const refreshResponse = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (refreshResponse.ok) return playOnDevice(deviceId, trackUri, positionMs, playlistUri);
+      throw new Error('Spotify session expired - please login again');
+    }
+    throw new Error('Failed to play track on device');
+  }
+}

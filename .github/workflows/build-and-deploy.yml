@@ -94,6 +94,29 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Patch r8s to make App host optional
+      run: |
+        # Patch @r8s/recipes dist to skip Endpoint creation when App has no host.
+        # Temporary until @r8s/recipes@0.1.1 is published with this fix.
+        APP_JS="node_modules/@r8s/recipes/dist/app.js"
+        node -e "
+          const fs = require('fs');
+          const file = '$APP_JS';
+          let code = fs.readFileSync(file, 'utf8');
+          // The published code unconditionally pushes jsx(Endpoint, {...}).
+          // Wrap it in: if (host) { ... }
+          // Match: elements.push((0, core_1.jsx)(endpoint_1.Endpoint, {
+          //   ... ends with: }));
+          const re = /elements\.push\(\(0, core_1\.jsx\)\(endpoint_1\.Endpoint,\s*\{[\s\S]*?\}\)\);/;
+          if (re.test(code)) {
+            code = code.replace(re, 'if (host) { $& }');
+            fs.writeFileSync(file, code);
+            console.log('Patched app.js: Endpoint creation is now conditional on host');
+          } else {
+            console.log('app.js already patched or pattern not found');
+          }
+        "
+
     - name: Render K8s manifests with image tag
       run: npm run k8s:render
       env:

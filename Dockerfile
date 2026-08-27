@@ -6,8 +6,6 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-# Remove .env to avoid leaking local dev settings into production build
-RUN rm -f .env
 RUN npm run build
 RUN npm run build:server
 

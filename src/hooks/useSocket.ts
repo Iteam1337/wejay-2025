@@ -44,6 +44,7 @@ export function useSocket() {
 
     const socket = io({
       path: '/socket.io',
+      transports: ['websocket', 'polling'],
       auth: {
         token: accessToken,
         userId: user.id,

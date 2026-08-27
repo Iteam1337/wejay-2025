@@ -136,28 +136,6 @@ function WejayRoute() {
   )
 }
 
-// BackendTrafficPolicy for WebSocket/Socket.IO support
-function WejayTrafficPolicy() {
-  return (
-    <backendtrafficpolicy
-      apiVersion="gateway.envoyproxy.io/v1alpha1"
-      kind="BackendTrafficPolicy"
-      metadata={{ name: 'wejay-websocket', namespace: 'wejay' }}
-      spec={{
-        targetRefs: [
-          { group: 'gateway.networking.k8s.io', kind: 'HTTPRoute', name: 'wejay-endpoint-route' },
-        ],
-        timeout: {
-          http: { requestTimeout: '0s' },
-        },
-        connection: {
-          bufferLimit: 10485760,
-        },
-      }}
-    />
-  )
-}
-
 export default (
   <Platform namespace="wejay">
     <VaultServiceAccount />
@@ -166,7 +144,6 @@ export default (
     <RedisCluster />
     <WejayCert />
     <WejayRoute />
-    <WejayTrafficPolicy />
     <App
       name="wejay"
       image={image}

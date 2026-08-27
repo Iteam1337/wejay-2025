@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { Server as SocketIOServer } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import { authMiddleware } from './middleware/auth.js';
 import { roomsApiMiddleware } from './middleware/rooms.js';
@@ -92,6 +93,11 @@ redis.on('connect', () => {
 redis.on('error', (err) => {
   console.error('[Socket.IO] Redis error:', err);
 });
+
+// Redis adapter for multi-pod Socket.IO (sticky session not needed)
+const pubClient = redis;
+const subClient = redis.duplicate();
+io.adapter(createAdapter(pubClient, subClient));
 
 setupSocketIO(io, redis);
 

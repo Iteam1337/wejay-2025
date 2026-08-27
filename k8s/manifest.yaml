@@ -90,22 +90,6 @@ spec:
         - name: wejay
           port: 80
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy
-metadata:
-  name: wejay-websocket
-  namespace: wejay
-spec:
-  targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: wejay-endpoint-route
-  timeout:
-    http:
-      requestTimeout: 0s
-  connection:
-    bufferLimit: 10485760
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -365,7 +365,9 @@ export async function getAvailableDevices(): Promise<SpotifyDevice[]> {
   }
 
   const data = await response.json();
-  return data.devices || [];
+  const devices = data.devices || [];
+  console.log('[Spotify] Devices from API:', devices.map((d: SpotifyDevice) => `${d.name} (${d.type}, active=${d.is_active})`));
+  return devices;
 }
 
 export async function transferPlayback(deviceId: string, play: boolean = false): Promise<void> {

@@ -13,5 +13,3 @@ spec:
     http:
       request: 0s
       backendRequest: 0s
-  connection:
-    bufferLimit: 10485760

@@ -11,5 +11,6 @@ spec:
       name: wejay-endpoint-route
   timeout:
     http:
-      request: 0s
-      backendRequest: 0s
+      requestTimeout: 0s
+      maxStreamDuration: 0s
+      connectionIdleTimeout: 0s

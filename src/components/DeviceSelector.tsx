@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDevices, getDeviceIcon } from '@/hooks/useDevices';
 import { useAuth } from '@/contexts/AuthContext';
 import { transferPlayback } from '@/lib/spotify';
@@ -21,8 +21,14 @@ export function DeviceSelector({ onDeviceChange }: DeviceSelectorProps) {
   const { isAuthenticated, isPremium } = useAuth();
   const { devices, selectedDeviceId, selectDevice, refresh, isLoading } = useDevices();
   const [isTransferring, setIsTransferring] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   if (!isAuthenticated || !isPremium) return null;
+
+  // Refresh devices when dropdown opens
+  useEffect(() => {
+    if (isOpen) refresh();
+  }, [isOpen, refresh]);
 
   const handleSelect = async (deviceId: string) => {
     setIsTransferring(true);
@@ -40,7 +46,7 @@ export function DeviceSelector({ onDeviceChange }: DeviceSelectorProps) {
   const selectedDevice = devices.find((d) => d.id === selectedDeviceId);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           className="neumorphic-button px-3 h-10 flex items-center gap-2 flex-shrink-0 text-sm font-medium"

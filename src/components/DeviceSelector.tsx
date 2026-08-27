@@ -23,12 +23,12 @@ export function DeviceSelector({ onDeviceChange }: DeviceSelectorProps) {
   const [isTransferring, setIsTransferring] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!isAuthenticated || !isPremium) return null;
-
   // Refresh devices when dropdown opens
   useEffect(() => {
-    if (isOpen) refresh();
-  }, [isOpen, refresh]);
+    if (isOpen && isAuthenticated && isPremium) refresh();
+  }, [isOpen, refresh, isAuthenticated, isPremium]);
+
+  if (!isAuthenticated || !isPremium) return null;
 
   const handleSelect = async (deviceId: string) => {
     setIsTransferring(true);

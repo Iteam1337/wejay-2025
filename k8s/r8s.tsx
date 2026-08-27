@@ -93,20 +93,63 @@ function RedisCluster() {
   )
 }
 
+// TLS certificate for wejay.dmz.berget.ai
+function WejayCert() {
+  return (
+    <certificate
+      apiVersion="cert-manager.io/v1"
+      kind="Certificate"
+      metadata={{ name: 'wejay-tls', namespace: 'wejay' }}
+      spec={{
+        secretName: 'wejay-tls',
+        dnsNames: ['wejay.dmz.berget.ai'],
+        issuerRef: { name: 'letsencrypt-prod', kind: 'ClusterIssuer' },
+      }}
+    />
+  )
+}
+
+// HTTPRoute to shared dmz gateway
+// Uses sharedGateway to avoid per-app LoadBalancer IP
+function WejayRoute() {
+  return (
+    <httproute
+      apiVersion="gateway.networking.k8s.io/v1"
+      kind="HTTPRoute"
+      metadata={{
+        name: 'wejay-endpoint-route',
+        namespace: 'wejay',
+        annotations: {
+          'external-dns.alpha.kubernetes.io/hostname': 'wejay.dmz.berget.ai',
+        },
+      }}
+      spec={{
+        parentRefs: [{ name: 'dmz-shared-gateway', namespace: 'envoy-gateway-system' }],
+        hostnames: ['wejay.dmz.berget.ai'],
+        rules: [
+          {
+            backendRefs: [{ name: 'wejay', port: 80 }],
+          },
+        ],
+      }}
+    />
+  )
+}
+
 export default (
-  <Platform namespace="wejay" routing="gateway">
+  <Platform namespace="wejay">
     <VaultServiceAccount />
     <VaultAuth />
     <WejaySecrets />
     <RedisCluster />
+    <WejayCert />
+    <WejayRoute />
     <App
       name="wejay"
       image={image}
-      host="wejay.dmz.berget.ai"
       port={8080}
       replicas={2}
       cache={false}
-      sharedGateway={{ name: 'dmz-shared-gateway', namespace: 'envoy-gateway-system' }}
       env={{
         NODE_ENV: 'production',
         REDIS_URL: 'redis://wejay-cache-leader.wejay.svc.cluster.local:6379',
@@ -120,15 +163,6 @@ export default (
         requests: { cpu: '100m', memory: '128Mi' },
         limits: { cpu: '500m', memory: '512Mi' },
       }}
-      tls={{
-        secretName: 'wejay-tls',
-        clusterIssuer: 'letsencrypt-prod',
-      }}
-      dns={true}
     />
   </Platform>
 )
-
-// Override: force HTTPRoute to use shared gateway
-// (r8s npm package doesn't have sharedGateway support yet)
-void 0

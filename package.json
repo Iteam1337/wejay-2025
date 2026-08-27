@@ -22,6 +22,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@r8s/cli": "^0.1.0",
     "@r8s/core": "^0.1.0",
     "@r8s/recipes": "^0.1.0",
     "@radix-ui/react-accordion": "^1.2.11",
@@ -92,7 +93,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@r8s/cli": "^0.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/koa": "^3.0.1",
     "@types/koa__cors": "^5.0.1",

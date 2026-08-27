@@ -78,7 +78,8 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/iteam1337/wejay-2025:main
+          image: ghcr.io/iteam1337/wejay-2025:1.0.0
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -150,32 +151,16 @@ spec:
     kind: ClusterIssuer
 ---
 apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: wejay-endpoint-gateway
-  namespace: wejay
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: wejay.dmz.berget.ai
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: https
-      protocol: HTTPS
-      port: 443
-      hostname: wejay.dmz.berget.ai
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - name: wejay-tls
----
-apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: wejay-endpoint-route
   namespace: wejay
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: wejay.dmz.berget.ai
 spec:
   parentRefs:
-    - name: wejay-endpoint-gateway
+    - name: dmz-shared-gateway
+      namespace: envoy-gateway-system
   hostnames:
     - wejay.dmz.berget.ai
   rules:

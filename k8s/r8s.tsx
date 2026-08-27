@@ -106,6 +106,7 @@ export default (
       port={8080}
       replicas={2}
       cache={false}
+      sharedGateway={{ name: 'dmz-shared-gateway', namespace: 'envoy-gateway-system' }}
       env={{
         NODE_ENV: 'production',
         VITE_SPOTIFY_REDIRECT_URI: 'https://wejay.dmz.berget.ai/callback',

@@ -109,8 +109,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/iteam1337/wejay-2025:1.0.0
-          imagePullPolicy: Always
+          image: ghcr.io/iteam1337/wejay-2025:main
           ports:
             - containerPort: 8080
           env:
@@ -165,3 +164,23 @@ spec:
   ports:
     - port: 80
       targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wejay-endpoint
+  namespace: wejay
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wejay
+                port:
+                  number: 80

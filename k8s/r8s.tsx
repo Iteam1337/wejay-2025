@@ -78,7 +78,7 @@ function RedisCluster() {
       kind="RedisCluster"
       metadata={{ name: 'wejay-cache', namespace: 'wejay' }}
       spec={{
-        clusterSize: 3,
+        clusterSize: 1,
         persistenceEnabled: false,
         kubernetesConfig: {
           image: 'redis:7.2-alpine',
